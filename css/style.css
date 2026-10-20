@@ -217,6 +217,8 @@ button.x-card:hover, a.x-card:hover { rotate: 0deg; translate: -4px -6px; box-sh
 .x-media img { width: 100%; height: 100%; object-fit: cover; }
 .x-media--glyph { display: grid; place-items: center; background: var(--chrome); }
 .x-media--glyph span { font-size: 80px; font-family: var(--display); }
+.x-media--feed { position: relative; }
+.x-card--feed:hover .vcard__play { scale: 1.15; }
 .x-card h3 { font-family: var(--display); font-weight: 400; font-size: 18px; margin: 0 4px 4px; }
 .x-card p { margin: 0 4px; font-size: 14px; font-weight: 500; }
 .x-card--text { background: var(--ink); color: var(--paper); padding: 24px; display: flex; flex-direction: column; justify-content: center; min-height: 200px; }
@@ -345,6 +347,7 @@ button.x-card:hover, a.x-card:hover { rotate: 0deg; translate: -4px -6px; box-sh
 .np__pill:hover { translate: -2px -2px; box-shadow: 6px 6px 0 var(--ink); }
 .np__pill:active { translate: 2px 2px; box-shadow: 1px 1px 0 var(--ink); }
 .np__art { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--ink); flex: none; }
+.np__art--disc { display: block; background: radial-gradient(circle, var(--paper) 18%, var(--ink) 20%, var(--ink) 34%, var(--c1) 36%, var(--c1) 60%, var(--ink) 62%); }
 .is-playing .np__art { animation: spin 6s linear infinite; }
 @keyframes spin { to { rotate: 360deg; } }
 .np__txt { display: grid; min-width: 0; text-align: left; line-height: 1.15; }

@@ -57,11 +57,14 @@ export default {
   },
 
   /* ---------- Background music ----------
-     youtube: a YouTube link or video id. It plays (looping) after the
-     visitor's first tap, through YouTube's own player. Remove the line
-     or set it to "" to turn music off.
-     volume: 0–100.   title: optional — otherwise YouTube's title is used. */
+     Starts on the visitor's first tap (browsers block sound before that).
+     file:    upload the song to assets/music/ (mp3 or m4a) and put its
+              path here — plays instantly with NO ads. Used first.
+     youtube: fallback if there's no file. YouTube may play an ad before
+              the song; a website can't turn those off.
+     volume: 0–100.  title / cover: optional (cover = image path).        */
   music: {
+    file: "assets/music/song.mp3",
     youtube: "https://youtu.be/fFMYua37UGQ",
     volume: 35,
     title: "",
@@ -157,14 +160,15 @@ export default {
   /* ---------- Extras ----------
      A free-form grid for anything else: merch, zines, process videos,
      stickers, links, notes...
-     type: "image" | "video" | "link" | "text"
+     type: "image" | "video" | "link" | "text" | "feed"
+       feed  → a random post from a Videos group each visit (from: group id, e.g. "timelapse")
        image → opens full-screen          (needs image)
        video → plays in a pop-up           (url: .mp4 file or YouTube link)
        link  → opens in a new tab          (url)
        text  → just a note card            (text)                           */
   extras: [
     { type: "image", title: "Sticker sheet",   image: "assets/extras/stickers.jpg", caption: "Die-cut stickers, 2025" },
-    { type: "video", title: "Process timelapse", url: "assets/extras/process.mp4", image: "assets/extras/process-thumb.jpg" },
+    { type: "feed",  title: "Process timelapse", from: "timelapse" },   // random timelapse TikTok on every visit
     { type: "link",  title: "Shop / prints",   url: "https://example.com", caption: "Prints & originals" },
     { type: "text",  title: "Now",             text: "Currently working on a new series. Commissions open from spring." },
     { type: "image", title: "Zine",            image: "assets/extras/zine.jpg", caption: "Risograph zine, 24pp" },

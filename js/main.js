@@ -338,6 +338,23 @@ const ICON = { image: "◉", video: "▶", link: "↗", text: "✎" };
 const extraMedia = extras.filter((x) => x.type === "image" || x.type === "video");
 extras.forEach((x, i) => {
   const color = PAL[i % PAL.length];
+  if (x.type === "feed") {
+    // shortcut card: a random post from one of the sorted groups, new pick on every visit
+    const pool = (buckets.find((b) => b.id === x.from)?.posts || []).filter((p) => p.art || p.image);
+    if (!pool.length) return;
+    const p = pool[Math.floor(Math.random() * pool.length)];
+    const card = el("button", "x-card x-card--feed reveal");
+    card.style.setProperty("--card", color);
+    card.style.setProperty("--tilt", `${((i * 37) % 7) - 3}deg`);
+    const m = el("div", "x-media x-media--feed");
+    m.append(smartImg(p.art || p.image, { label: p.title, color, seed: p.id, kind: "extra" }));
+    m.insertAdjacentHTML("beforeend", `<span class="vcard__play">▶</span>`);
+    card.append(m);
+    card.insertAdjacentHTML("beforeend", `<span class="x-badge">▶</span><h3>${esc(x.title || p.title || "Timelapse")}</h3><p>${esc([p.title, fmtDate(p.date)].filter(Boolean).join(" · "))}</p>`);
+    card.onclick = () => openLightbox(postLightbox([p], color), 0);
+    grid.append(card);
+    return;
+  }
   const card = el(x.type === "text" || x.type === "tiktok" || x.type === "instagram" ? "div" : x.type === "link" ? "a" : "button", `x-card x-card--${x.type}`);
   if (x.type === "link") { card.href = x.url; if (!x.url.startsWith("mailto:")) { card.target = "_blank"; card.rel = "noopener"; } }
   card.style.setProperty("--card", color);
@@ -431,7 +448,7 @@ document.addEventListener("click", (e) => {
 
 /* ---------- iPod menu ---------- */
 const ipod = $(".ipod"), ipList = $(".ipod__list");
-let ipIdx = 0, wheelMoved = false;
+let ipIdx = 0;
 SECTIONS.forEach((s) => ipList.append(el("li", "", `<span>${s.label}</span><b>›</b>`)));
 const ipItems = $$("li", ipList);
 ipItems.forEach((li, i) => (li.onclick = () => { ipIdx = i; ipRender(); ipSelect(); }));
@@ -447,24 +464,35 @@ function ipSelect() { const r = $(".wheel__center").getBoundingClientRect(); ipC
 $(".ipod-btn").onclick = ipOpen;
 ipod.addEventListener("click", (e) => { if (e.target === ipod) ipClose(); });
 {
+  // One handler for the whole wheel: a tap fires the button under your
+  // finger (MENU, ◀◀, ▶▶, ▶❚❚ or the centre); a circular drag scrolls.
   const wheel = $(".wheel");
-  let last = null, acc = 0;
+  const ACT = { menu: ipClose, prev: () => ipMove(-1), next: () => ipMove(1), select: ipSelect };
+  let last = null, acc = 0, moved = 0, downAct = null, pid = null;
   const ang = (e) => { const r = wheel.getBoundingClientRect(); return Math.atan2(e.clientY - r.y - r.height / 2, e.clientX - r.x - r.width / 2); };
   wheel.addEventListener("pointerdown", (e) => {
-    if (e.target.classList.contains("wheel__center")) return;
-    last = ang(e); acc = 0; wheelMoved = false; wheel.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    downAct = e.target.closest("[data-act]")?.dataset.act || null;
+    pid = e.pointerId; last = ang(e); acc = 0; moved = 0;
+    // the centre button never spins
+    if (e.target.closest(".wheel__center")) last = null;
   });
   wheel.addEventListener("pointermove", (e) => {
-    if (last == null) return;
+    if (last == null || e.pointerId !== pid) return;
     const a = ang(e); let d = a - last; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
-    last = a; acc += d;
-    if (Math.abs(acc) > 0.4) { wheelMoved = true; ipMove(Math.sign(acc)); acc = 0; }
+    last = a; acc += d; moved += Math.abs(d);
+    if (moved > 0.25 && !wheel.hasPointerCapture(e.pointerId)) wheel.setPointerCapture(e.pointerId);
+    if (Math.abs(acc) > 0.4) { ipMove(Math.sign(acc)); acc = 0; }
   });
-  wheel.addEventListener("pointerup", () => (last = null));
-  $$("[data-act]", wheel).forEach((b) => (b.onclick = () => {
-    if (wheelMoved) return;
-    ({ menu: ipClose, prev: () => ipMove(-1), next: () => ipMove(1), select: ipSelect })[b.dataset.act]();
-  }));
+  const end = (e) => {
+    if (e.pointerId !== pid) return;
+    if (moved <= 0.25 && downAct && e.type === "pointerup") { blip(1600); ACT[downAct](); }
+    last = null; downAct = null; pid = null;
+  };
+  wheel.addEventListener("pointerup", end);
+  wheel.addEventListener("pointercancel", end);
+  // keyboard: Enter/Space on a focused wheel button
+  $$("[data-act]", wheel).forEach((b) => b.addEventListener("click", (e) => { if (e.detail === 0) ACT[b.dataset.act](); }));
 }
 addEventListener("keydown", (e) => {
   if (ipod.hidden) return;
