@@ -22,33 +22,38 @@ export default {
   },
 
   /* ---------- Social feeds (auto-sorted) ----------
-     Every day a GitHub Action pulls your posts, keeps each caption +
+     Every day a GitHub Action pulls your TikToks, keeps each caption +
      hashtags and saves the cover images (see README → "Auto-sync").
-     The site then files each post into the FIRST section below whose
-     keywords match one of its #hashtags or a word in its caption.
-       match: ["timelapse", ...]   keywords, without the #
-       match: "*"                  everything that matched nothing else
-       inPaintings: true           also show these covers in Paintings
-                                   as a "Fresh from the feed" series
-     Change the keywords any time — no re-sync needed.
-     Hide a post: add its keyword to `hide`, or set "hidden": true on it
-     in social/feed.json.                                                 */
+     The site files each post into the FIRST section below that matches:
+       match:   hashtags (without the #) — the main way posts are sorted
+       phrases: optional caption phrases, e.g. "completed this sketchbook"
+       match: "*"         would collect everything left over (off for now,
+                          so personal posts stay off the portfolio)
+       inPaintings: true  also show these covers in Paintings as the
+                          "Fresh from the feed" series
+     Edits here apply instantly — no re-sync needed.
+     hide: posts with any of these hashtags never show.
+     Hide or rename one post: edit it in social/feed.json
+       ("hidden": true  /  "title": "...", "titleLocked": true).         */
   social: {
     tiktok: "lifeofseif",
     instagram: "furballtbb",
     limit: 80,                         // newest N posts to keep per sync
     sort: [
-      { id: "timelapse",  title: "Timelapses", color: "#c6ff00", inPaintings: true,
-        match: ["timelapse", "speedpaint", "speedpainting", "speeddraw", "speeddrawing", "arttimelapse", "paintingtimelapse",
-                "drawingtimelapse", "process", "artprocess", "paintingprocess", "paintwithme", "drawwithme", "wip", "workinprogress"] },
-      { id: "paintings",  title: "Paintings",  color: "#ff3ea5", inPaintings: true,
-        match: ["painting", "paintings", "oilpainting", "acrylicpainting", "acrylic", "gouache", "watercolor", "watercolour",
-                "canvas", "painter", "artwork", "finishedpiece", "traditionalart", "fineart"] },
+      { id: "timelapse", title: "Timelapses", color: "#c6ff00", inPaintings: true,
+        match: ["timelapse", "speedpaint", "speedpainting", "arttimelapse", "drawingtimelapse", "paintingtimelapse"],
+        phrases: ["drawing timelapse", "painting timelapse", "drawing stream"] },
+      { id: "flips", title: "Sketchbook flips", color: "#a77bff",
+        match: ["sketchbooktour", "flipthrough", "sketchbookflip"],
+        phrases: ["completed this sketchbook", "in its entirety", "first part", "part 2", "flip through"] },
       { id: "sketchbook", title: "Sketchbook", color: "#00e0ff",
-        match: ["sketchbook", "sketchbooktour", "sketch", "sketching", "sketches", "drawing", "doodle", "doodles", "ink", "pencil", "illustration"] },
-      { id: "more",       title: "More",       color: "#a77bff", match: "*" },
+        match: ["sketchbook", "acrylicmarker", "acrylicmarkers", "posca", "marker", "sketch", "doodle"] },
+      { id: "paintings", title: "Paintings", color: "#ff3ea5", inPaintings: true,
+        match: ["acrylicpainting", "oilpainting", "painting", "canvas", "artbattle", "gouache", "watercolor"] },
+      { id: "digital", title: "Digital", color: "#ff8a00",
+        match: ["procreate", "digitalart", "fanart", "illustration", "drawing", "drawings", "sbr", "jojo"] },
     ],
-    hide: [],                          // e.g. ["personal", "ad"]
+    hide: ["poetry", "corecore", "fitnessmotivation", "weightloss", "costume", "halloween", "memories", "vrmod"],
   },
 
   /* ---------- Look & feel ----------

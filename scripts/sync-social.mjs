@@ -124,6 +124,59 @@ async function enrichTikTok(user, v) {
   });
 }
 
+/* ---------- Finished-artwork images ----------
+   A TikTok cover is often a title card or the blank first frame of a
+   timelapse. For posts that feed the Paintings section we look for a
+   better picture of the finished piece:
+     videos     → a frame from the very end (where the piece is done)
+     slideshows → the photo slides themselves (slide 2 is usually the art)
+   Result: post.art (+ post.slides). Set "artLocked": true on a post in
+   social/feed.json and put your own path in "art" to override.          */
+const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+const TMP = path.join(ROOT, ".sync-tmp");
+
+async function slidesFromPage(p) {
+  const r = await fetch(p.url, { headers: { "user-agent": UA, "accept-language": "en-US,en;q=0.9" } });
+  const html = await r.text();
+  const m = html.match(/<script[^>]+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/);
+  if (!m) throw new Error("no page data");
+  const item = JSON.parse(m[1]).__DEFAULT_SCOPE__?.["webapp.video-detail"]?.itemInfo?.itemStruct;
+  const imgs = (item?.imagePost?.images || []).map((i) => {
+    const list = i.imageURL?.urlList || [];
+    return list.find((u) => /jpe?g/i.test(u)) || list[0];
+  }).filter(Boolean);
+  return imgs.slice(0, 12);
+}
+
+async function finalFrame(p) {
+  await fs.mkdir(TMP, { recursive: true });
+  const vid = path.join(TMP, `${p.id}.mp4`);
+  await run("yt-dlp", ["-q", "--no-warnings", "-f", "b[height<=1080][ext=mp4]/b[ext=mp4]/b", "-o", vid, p.url], { timeout: 180_000 });
+  const rel = `${MEDIA}/tiktok/${p.id}-final.jpg`;
+  await fs.mkdir(path.join(ROOT, path.dirname(rel)), { recursive: true });
+  // 0.4s before the end: past the drawing, before any end-card fade
+  await run("ffmpeg", ["-y", "-loglevel", "error", "-sseof", "-0.4", "-i", vid, "-frames:v", "1", "-q:v", "3", path.join(ROOT, rel)], { timeout: 60_000 });
+  await fs.rm(vid, { force: true });
+  return rel;
+}
+
+async function findArt(p) {
+  if (p.platform !== "tiktok" || p.artLocked || p.artTried) return;
+  p.artTried = true;
+  try {
+    const slides = await slidesFromPage(p);
+    if (slides.length) {
+      p.slides = [];
+      for (const [i, u] of slides.entries()) {
+        try { p.slides.push(await download(u, `${MEDIA}/tiktok/${p.id}-${i + 1}.jpg`)); } catch (e) { warn(`slide ${i + 1} of ${p.id}: ${e.message}`); }
+      }
+      if (p.slides.length) { p.art = p.slides[p.slides.length > 1 ? 1 : 0]; log(`  slides ${p.id}: ${p.slides.length}`); return; }
+    }
+  } catch (e) { /* not a slideshow, or page blocked — try as a video */ }
+  try { p.art = await finalFrame(p); log(`  final frame ${p.id}`); }
+  catch (e) { warn(`no artwork image for ${p.id}: ${String(e.stderr || e.message).trim().split("\n").at(-1)}`); }
+}
+
 /* ---------- Instagram (optional, needs a token) ---------- */
 async function syncInstagram(token) {
   try {
@@ -187,6 +240,16 @@ if (process.env.INSTAGRAM_TOKEN) await syncInstagram(process.env.INSTAGRAM_TOKEN
 else if (cfg.instagram) log("Instagram: no INSTAGRAM_TOKEN set — using social/links.txt only");
 await manualLinks(tt);
 
+const { sortPosts } = await import("../js/social-sort.js");
+if (!fixture && !args.includes("--no-art")) {
+  const forPaintings = sortPosts([...posts.values()], cfg.sort || [], { hide: cfg.hide || [] })
+    .filter((b) => b.inPaintings).flatMap((b) => b.posts);
+  const todo = forPaintings.filter((p) => !p.artTried && !p.artLocked);
+  if (todo.length) log(`Finding finished-artwork images for ${todo.length} post(s)…`);
+  for (const p of todo) await findArt(p);
+  await fs.rm(TMP, { recursive: true, force: true });
+}
+
 const list = [...posts.values()].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 const out = { updated: new Date().toISOString(), sources: { tiktok: tt || null, instagram: cfg.instagram || null }, posts: list };
 await fs.mkdir(path.dirname(FEED), { recursive: true });
@@ -195,8 +258,7 @@ if (JSON.stringify({ ...out, updated: null }) !== before) await fs.writeFile(FEE
 else log("No changes.");
 
 // summary of how posts sort with the current rules (same logic as the site)
-const { sortPosts } = await import("../js/social-sort.js");
-const buckets = sortPosts(list, cfg.sort || []);
+const buckets = sortPosts(list, cfg.sort || [], { hide: cfg.hide || [] });
 log(`Saved ${list.length} post(s): +${report.added} new, ${report.updated} refreshed.`);
 for (const b of buckets) log(`  ${b.title}: ${b.posts.length}`);
 if (process.env.GITHUB_STEP_SUMMARY) {

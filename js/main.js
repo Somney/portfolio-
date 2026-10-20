@@ -26,12 +26,12 @@ const postLightbox = (posts, color) => posts.map((p) => ({
 }));
 
 // newest covers from sections marked inPaintings → a paintings series
-const fresh = buckets.filter((b) => b.inPaintings).flatMap((b) => b.posts).filter((p) => p.image)
+const fresh = buckets.filter((b) => b.inPaintings).flatMap((b) => b.posts).filter((p) => p.art || p.image)
   .sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 24);
 if (fresh.length) paintings.unshift({
   id: "feed", title: "Fresh from the feed", color: PAL[3] || "#ff8a00", ink: INK,
   blurb: `My latest pieces, pulled straight from ${[social.tiktok && "TikTok", feed?.posts?.some((p) => p.platform === "instagram") && "Instagram"].filter(Boolean).join(" & ")} and sorted by hashtag.`,
-  items: fresh.map((p) => ({ title: p.title || "Untitled", year: p.date?.slice(0, 4), medium: tagLine(p), image: p.image, post: p })),
+  items: fresh.map((p) => ({ title: p.title || "Untitled", year: p.date?.slice(0, 4), medium: tagLine(p), image: p.art || p.image, post: p })),
 });
 
 /* ---------- Theme + text ---------- */
