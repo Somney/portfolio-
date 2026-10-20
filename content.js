@@ -11,7 +11,7 @@
 export default {
   /* ---------- About you ---------- */
   artist: {
-    name: "YOUR NAME",                 // big name in the hero + browser tab
+    name: "Fury Blade Seif",               // big name in the hero + browser tab
     tagline: "paintings · sketchbooks · extras",
     bio: "Painter & sketchbook hoarder. Swap this line for a short intro about you and your work.",
     email: "hello@example.com",
