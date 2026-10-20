@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-20T03:53:24.336Z",
+  "updated": "2026-10-20T03:58:47.707Z",
   "sources": {
     "tiktok": "lifeofseif",
     "instagram": "furballtbb"
@@ -14,14 +14,20 @@
       "date": "2026-10-20T03:10:36.000Z",
       "image": "assets/social/tiktok/7698582113221709074.jpg",
       "duration": 16,
-      "views": 214,
+      "views": 229,
       "tags": [
         "acrylic",
         "painting",
         "aldo",
         "martin",
         "slushynoobz"
-      ]
+      ],
+      "artTried": true,
+      "slides": [
+        "assets/social/tiktok/7698582113221709074-1.jpg",
+        "assets/social/tiktok/7698582113221709074-2.jpg"
+      ],
+      "art": "assets/social/tiktok/7698582113221709074-2.jpg"
     },
     {
       "platform": "tiktok",
@@ -39,7 +45,8 @@
         "canvas",
         "nostalgia",
         "flashphotography"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -56,7 +63,13 @@
         "canvas",
         "nostalgia",
         "flashphotography"
-      ]
+      ],
+      "artTried": true,
+      "slides": [
+        "assets/social/tiktok/7695187373730073908-1.jpg",
+        "assets/social/tiktok/7695187373730073908-2.jpg"
+      ],
+      "art": "assets/social/tiktok/7695187373730073908-2.jpg"
     },
     {
       "platform": "tiktok",
@@ -117,12 +130,13 @@
       "date": "2026-10-05T02:45:23.000Z",
       "image": "assets/social/tiktok/7693009323110272264.jpg",
       "duration": 32,
-      "views": 576,
+      "views": 578,
       "tags": [
         "acrylicpainting",
         "live",
         "artbattle"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -356,7 +370,7 @@
       "date": "2026-09-14T18:45:21.000Z",
       "image": "assets/social/tiktok/7685463908596911378.jpg",
       "duration": 12,
-      "views": 2622,
+      "views": 2623,
       "tags": [
         "nostalgia",
         "wiiu",
@@ -413,7 +427,8 @@
         "timelapse",
         "acrylic",
         "marker"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -464,7 +479,8 @@
         "digitalart",
         "pinterest",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -498,7 +514,8 @@
         "acrylicmarker",
         "drawing",
         "sketchbook"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -592,7 +609,8 @@
         "acrylic",
         "painting",
         "sketchbook"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -608,7 +626,14 @@
         "acrylicpainting",
         "canvas",
         "selfportrait"
-      ]
+      ],
+      "artTried": true,
+      "slides": [
+        "assets/social/tiktok/7658117044277136648-1.jpg",
+        "assets/social/tiktok/7658117044277136648-2.jpg",
+        "assets/social/tiktok/7658117044277136648-3.jpg"
+      ],
+      "art": "assets/social/tiktok/7658117044277136648-2.jpg"
     },
     {
       "platform": "tiktok",
@@ -625,7 +650,8 @@
         "acrylicmarker",
         "drawings",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -642,7 +668,8 @@
         "sketchbook",
         "drawings",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -709,7 +736,8 @@
         "illustration",
         "acrylicmarker",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -743,7 +771,8 @@
         "sketchbook",
         "acrylicmarker",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -842,7 +871,8 @@
         "illustration",
         "sketchbook",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -875,7 +905,8 @@
         "acrylicmarker",
         "illustration",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -923,7 +954,8 @@
         "illustration",
         "sketchbook",
         "acrylicmarker"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -955,7 +987,14 @@
         "acrylicpainting",
         "artwork",
         "wip"
-      ]
+      ],
+      "artTried": true,
+      "slides": [
+        "assets/social/tiktok/7638338047402085650-1.jpg",
+        "assets/social/tiktok/7638338047402085650-2.jpg",
+        "assets/social/tiktok/7638338047402085650-3.jpg"
+      ],
+      "art": "assets/social/tiktok/7638338047402085650-2.jpg"
     },
     {
       "platform": "tiktok",
@@ -986,7 +1025,8 @@
         "sketchbook",
         "acrylicmarker",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1017,7 +1057,8 @@
         "acrylicmarker",
         "sketchbook",
         "drawing"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1034,7 +1075,8 @@
         "sketchbook",
         "acrylicmarker",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1115,7 +1157,8 @@
         "acrylicpainting",
         "timelapse",
         "nostalgia"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1146,7 +1189,8 @@
       "tags": [
         "procreate",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1162,7 +1206,8 @@
         "procreate",
         "timelapse",
         "sketch"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1178,7 +1223,8 @@
         "sketchbook",
         "timelapse",
         "acrylicmarkers"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1194,7 +1240,8 @@
         "sketchbook",
         "timelapse",
         "acrylicmarkers"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1211,7 +1258,8 @@
         "timelapse",
         "sketchbook",
         "jakegyllenhaal"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1227,7 +1275,8 @@
         "sketchbook",
         "acrylicmarker",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1243,7 +1292,8 @@
         "timelapse",
         "acrylicmarker",
         "sketchbook"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1259,7 +1309,8 @@
         "painting",
         "acrylic",
         "timelapse"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1277,7 +1328,8 @@
         "reference",
         "digitalart",
         "pinterest"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1294,7 +1346,8 @@
         "timelapse",
         "reference",
         "pinterest"
-      ]
+      ],
+      "artTried": true
     },
     {
       "platform": "tiktok",
@@ -1311,7 +1364,8 @@
         "timelapse",
         "reference",
         "pinterest"
-      ]
+      ],
+      "artTried": true
     }
   ]
 }
