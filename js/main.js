@@ -3,6 +3,7 @@ import { $, $$, el, esc, clamp, smartImg, contrastOn, reducedMotion } from "./ut
 import { SplashBG, splashTransition } from "./splash.js";
 import { startDancer } from "./dancer.js";
 import { blip } from "./sound.js";
+import { initMusic } from "./music.js";
 import { sortPosts } from "./social-sort.js";
 
 const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [], social = {} } = content;
@@ -52,6 +53,9 @@ for (const s of artist.socials || []) {
   const a = el("a", "chip", esc(s.label)); a.href = s.url; a.target = "_blank"; a.rel = "noopener";
   $(".contact__socials").append(a);
 }
+
+/* ---------- Background music (YouTube, starts on first tap) ---------- */
+const music = initMusic(content.music);
 
 /* ---------- Hero: colour cycling + rotating words ---------- */
 let heroIdx = 0;
@@ -109,10 +113,12 @@ function lbShow() {
   $$(".lb-nav", lb).forEach((b) => (b.hidden = !multi));
 }
 function openLightbox(list, i) {
+  if (list[i]?.kind === "embed" || list[i]?.kind === "video") music?.hold(true);
   lbList = list; lbIdx = i; lbShow();
   lb.hidden = false; requestAnimationFrame(() => lb.classList.add("open"));
 }
 function closeLightbox() {
+  music?.hold(false);
   lb.classList.remove("open");
   setTimeout(() => { lb.hidden = true; $(".lb-media", lb).innerHTML = ""; }, 250);
 }
@@ -193,7 +199,7 @@ function updateCaption() {
 
 function setActive(i) {
   const n = clamp(i, 0, cfItems.length - 1);
-  if (n !== active) blip(900 + n * 40, 0.03);
+  if (n !== active) blip(1500 + (n % 6) * 60);
   active = n; layoutCoverflow(active); updateCaption();
 }
 
@@ -430,7 +436,7 @@ SECTIONS.forEach((s) => ipList.append(el("li", "", `<span>${s.label}</span><b>â€
 const ipItems = $$("li", ipList);
 ipItems.forEach((li, i) => (li.onclick = () => { ipIdx = i; ipRender(); ipSelect(); }));
 function ipRender() { ipItems.forEach((li, i) => li.classList.toggle("on", i === ipIdx)); }
-function ipMove(d) { const n = clamp(ipIdx + d, 0, ipItems.length - 1); if (n !== ipIdx) { ipIdx = n; blip(1800, 0.012); ipRender(); } }
+function ipMove(d) { const n = clamp(ipIdx + d, 0, ipItems.length - 1); if (n !== ipIdx) { ipIdx = n; blip(2000); ipRender(); } }
 function ipOpen() {
   const here = SECTIONS.findIndex((s) => { const r = document.getElementById(s.id).getBoundingClientRect(); return r.top <= innerHeight / 2 && r.bottom > innerHeight / 2; });
   ipIdx = Math.max(0, here); ipRender();

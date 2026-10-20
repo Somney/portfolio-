@@ -56,6 +56,17 @@ export default {
     hide: ["poetry", "corecore", "fitnessmotivation", "weightloss", "costume", "halloween", "memories", "vrmod"],
   },
 
+  /* ---------- Background music ----------
+     youtube: a YouTube link or video id. It plays (looping) after the
+     visitor's first tap, through YouTube's own player. Remove the line
+     or set it to "" to turn music off.
+     volume: 0–100.   title: optional — otherwise YouTube's title is used. */
+  music: {
+    youtube: "https://youtu.be/fFMYua37UGQ",
+    volume: 35,
+    title: "",
+  },
+
   /* ---------- Look & feel ----------
      palette: the neon colours the hero cycles through (iPod-ad style).
      ink:     the "silhouette" colour used for all the two-tone shapes.

@@ -15,13 +15,23 @@ function ac() {
 export const isMuted = () => muted;
 export function setMuted(v) { muted = v; try { localStorage.setItem("muted", v ? "1" : "0"); } catch {} }
 
-export function blip(freq = 1200, dur = 0.02) {
+// Soft click-wheel tick: a tiny filtered noise "tk" plus a quick muted
+// sine — clicky like an iPod wheel, nowhere near a beep.
+export function blip(freq = 1800) {
   const a = ac(); if (!a) return;
+  const t = a.currentTime;
+  const n = Math.floor(a.sampleRate * 0.01);
+  const buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 4);
+  const src = a.createBufferSource(); src.buffer = buf;
+  const hp = a.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 2200;
+  const lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 7000;
+  const ng = a.createGain(); ng.gain.value = 0.06;
+  src.connect(hp).connect(lp).connect(ng).connect(a.destination); src.start(t);
   const o = a.createOscillator(), g = a.createGain();
-  o.type = "square"; o.frequency.value = freq;
-  g.gain.setValueAtTime(0.03, a.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
-  o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + dur);
+  o.type = "sine"; o.frequency.value = Math.min(2600, Math.max(1400, freq));
+  g.gain.setValueAtTime(0.012, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.03);
 }
 
 // Filtered noise swoosh that sounds like a page turning.
