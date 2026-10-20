@@ -4,7 +4,7 @@ import { SplashBG, splashTransition } from "./splash.js";
 import { startDancer } from "./dancer.js";
 import { blip } from "./sound.js";
 
-const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [] } = content;
+const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [], social = {} } = content;
 const INK = theme.ink, PAPER = theme.paper, PAL = theme.palette;
 
 /* ---------- Theme + text ---------- */
@@ -113,7 +113,8 @@ paintings.forEach((s, i) => {
 function seriesItems(s) {
   return s.items.map((it) => ({
     kind: "image", src: it.image, title: it.title, color: s.color,
-    caption: `<strong>${esc(it.title)}</strong><span>${[it.year, it.medium, it.size].filter(Boolean).map(esc).join(" · ")}</span>`,
+    caption: `<strong>${esc(it.title)}</strong><span>${[it.year, it.medium, it.size].filter(Boolean).map(esc).join(" · ")}</span>` +
+      (it.link ? `<a class="lb-link" href="${esc(it.link)}" target="_blank" rel="noopener">${/tiktok/.test(it.link) ? "Watch on TikTok" : "View on Instagram"} ↗</a>` : ""),
   }));
 }
 
@@ -258,11 +259,16 @@ const ICON = { image: "◉", video: "▶", link: "↗", text: "✎" };
 const extraMedia = extras.filter((x) => x.type === "image" || x.type === "video");
 extras.forEach((x, i) => {
   const color = PAL[i % PAL.length];
-  const card = el(x.type === "text" ? "div" : x.type === "link" ? "a" : "button", `x-card x-card--${x.type}`);
+  const card = el(x.type === "text" || x.type === "tiktok" || x.type === "instagram" ? "div" : x.type === "link" ? "a" : "button", `x-card x-card--${x.type}`);
   if (x.type === "link") { card.href = x.url; if (!x.url.startsWith("mailto:")) { card.target = "_blank"; card.rel = "noopener"; } }
   card.style.setProperty("--card", color);
   card.style.setProperty("--tilt", `${((i * 37) % 7) - 3}deg`);
-  if (x.type === "text") {
+  if (x.type === "tiktok" || x.type === "instagram") {
+    const frame = socialEmbed(x.url);
+    card.innerHTML = `<span class="x-badge">${x.type === "tiktok" ? "♪" : "◎"}</span>`;
+    if (frame) { const m = el("div", `x-embed x-embed--${x.type}`); m.append(frame); card.append(m); }
+    card.insertAdjacentHTML("beforeend", `${x.title ? `<h3>${esc(x.title)}</h3>` : ""}<p><a href="${esc(x.url)}" target="_blank" rel="noopener">Open on ${x.type === "tiktok" ? "TikTok" : "Instagram"} ↗</a></p>`);
+  } else if (x.type === "text") {
     card.innerHTML = `<span class="x-badge">${ICON.text}</span><h3>${esc(x.title)}</h3><p>${esc(x.text)}</p>`;
   } else {
     if (x.image || x.type === "image") {
@@ -283,6 +289,43 @@ extras.forEach((x, i) => {
   card.classList.add("reveal");
   grid.append(card);
 });
+
+/* ---------- Social: post embeds + live TikTok feed ---------- */
+function socialEmbed(url = "") {
+  const tt = url.match(/tiktok\.com\/.*video\/(\d+)/);
+  const ig = url.match(/instagram\.com\/(?:[\w.]+\/)?(p|reel|tv)\/([\w-]+)/);
+  if (!tt && !ig) return null;
+  const f = el("iframe");
+  f.src = tt ? `https://www.tiktok.com/player/v1/${tt[1]}?description=1&music_info=1&rel=0` : `https://www.instagram.com/${ig[1]}/${ig[2]}/embed/captioned/`;
+  f.loading = "lazy"; f.allow = "autoplay; encrypted-media; fullscreen; picture-in-picture"; f.allowFullscreen = true;
+  f.title = tt ? "TikTok video" : "Instagram post";
+  return f;
+}
+{
+  const feeds = $(".feeds");
+  const tt = (social.tiktok || "").replace(/^@/, ""), ig = (social.instagram || "").replace(/^@/, "");
+  if (!tt && !ig) feeds.hidden = true;
+  if (ig) {
+    const a = el("a", "feed-card feed-card--ig", `<span class="feed-card__kicker">Instagram</span><strong>@${esc(ig)}</strong><span>New work, WIPs &amp; studio stuff</span><b>Follow ↗</b>`);
+    a.href = `https://www.instagram.com/${encodeURIComponent(ig)}/`; a.target = "_blank"; a.rel = "noopener";
+    feeds.append(a);
+  }
+  if (tt) {
+    const box = el("div", "feed-card feed-card--tt");
+    box.innerHTML = `<span class="feed-card__kicker">Latest on TikTok</span>
+      <blockquote class="tiktok-embed" cite="https://www.tiktok.com/@${esc(tt)}" data-unique-id="${esc(tt)}" data-embed-type="creator" style="max-width:780px;min-width:288px;margin:0">
+        <section><a target="_blank" rel="noopener" href="https://www.tiktok.com/@${esc(tt)}?refer=creator_embed">@${esc(tt)}</a></section>
+      </blockquote>`;
+    feeds.prepend(box);
+    // load TikTok's script only when the feed is close to view
+    new IntersectionObserver((es, o) => {
+      if (!es[0].isIntersecting) return;
+      o.disconnect();
+      const sc = document.createElement("script"); sc.async = true; sc.src = "https://www.tiktok.com/embed.js";
+      document.body.append(sc);
+    }, { rootMargin: "600px" }).observe(box);
+  }
+}
 
 /* ---------- Section navigation with splash transitions ---------- */
 const SECTIONS = [

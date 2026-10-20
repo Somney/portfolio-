@@ -59,6 +59,23 @@ Under `extras:` add one of:
 { type: "text",  title: "Now", text: "Working on..." },
 ```
 
+## TikTok & Instagram
+
+In `content.js`, the `social` block holds your usernames (`lifeofseif` on TikTok, `furballtbb` on Instagram):
+
+- **TikTok:** a "Latest on TikTok" block under Extras shows your newest videos automatically.
+- **Instagram:** a follow card links to your profile. Instagram has no official way to auto-show a whole profile.
+- **Embed one post:** copy its link (Share → Copy link) and add it to `extras`:
+
+```js
+{ type: "tiktok",    title: "Process video", url: "https://www.tiktok.com/@lifeofseif/video/1234567890123456789" },
+{ type: "instagram", title: "New piece",     url: "https://www.instagram.com/p/ABC123xyz/" },
+```
+
+- **Credit a painting to its post:** add `link: "<post url>"` to the painting. Its full-screen view then shows a "View on Instagram / Watch on TikTok" button.
+
+Embeds only appear on the real site (GitHub Pages or your local preview), not inside the Claude Artifact preview.
+
 ## Change colours, name, hero
 
 - `artist`: your name, bio, email, socials.

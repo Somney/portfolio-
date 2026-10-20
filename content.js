@@ -16,9 +16,22 @@ export default {
     bio: "Painter & sketchbook hoarder. Swap this line for a short intro about you and your work.",
     email: "hello@example.com",
     socials: [
-      { label: "Instagram", url: "https://instagram.com/" },
-      { label: "TikTok",    url: "https://tiktok.com/" },
+      { label: "Instagram", url: "https://www.instagram.com/furballtbb/" },
+      { label: "TikTok",    url: "https://www.tiktok.com/@lifeofseif" },
     ],
+  },
+
+  /* ---------- Social feeds ----------
+     tiktok:    your username → a "latest on TikTok" block that updates by itself
+     instagram: your username → a follow card linking to your profile
+     Set either to "" to hide it.
+     To show a specific post anywhere in Extras, add it as
+       { type: "tiktok",    url: "https://www.tiktok.com/@lifeofseif/video/123..." }
+       { type: "instagram", url: "https://www.instagram.com/p/ABC123/" }
+     Paintings can also link to the post they came from with  link: "<post url>".  */
+  social: {
+    tiktok: "lifeofseif",
+    instagram: "furballtbb",
   },
 
   /* ---------- Look & feel ----------
@@ -53,7 +66,8 @@ export default {
       color: "#c6ff00",      // background colour for this series
       ink: "#0d0d0d",        // text/silhouette colour on top of it
       items: [
-        { title: "Untitled I",   year: 2025, medium: "Oil on canvas",     size: "60 × 80 cm", image: "assets/paintings/series-one-01.jpg" },
+        // link (optional): the TikTok/Instagram post this piece appears in
+        { title: "Untitled I",   year: 2025, medium: "Oil on canvas",     size: "60 × 80 cm", image: "assets/paintings/series-one-01.jpg", link: "" },
         { title: "Untitled II",  year: 2025, medium: "Oil on canvas",     size: "50 × 50 cm", image: "assets/paintings/series-one-02.jpg" },
         { title: "Untitled III", year: 2024, medium: "Acrylic on panel",  size: "40 × 60 cm", image: "assets/paintings/series-one-03.jpg" },
         { title: "Untitled IV",  year: 2024, medium: "Oil on linen",      size: "90 × 120 cm", image: "assets/paintings/series-one-04.jpg" },
@@ -122,5 +136,8 @@ export default {
     { type: "text",  title: "Now",             text: "Currently working on a new series. Commissions open from spring." },
     { type: "image", title: "Zine",            image: "assets/extras/zine.jpg", caption: "Risograph zine, 24pp" },
     { type: "link",  title: "Say hi",          url: "mailto:hello@example.com", caption: "Email me" },
+    // Paste TikTok / Instagram post links here to embed them as cards:
+    // { type: "tiktok",    title: "Process video", url: "https://www.tiktok.com/@lifeofseif/video/1234567890123456789" },
+    // { type: "instagram", title: "New piece",     url: "https://www.instagram.com/p/XXXXXXXXXXX/" },
   ],
 };
