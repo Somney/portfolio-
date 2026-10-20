@@ -1,0 +1,7 @@
+// Extra posts for the site, one link per line. The daily sync adds these
+// on top of the TikToks it finds by itself. Use this for:
+//   • Instagram posts (if you haven't set up an Instagram token)
+//   • any TikTok the auto-discovery missed
+// Add hashtags after the link to control which section it lands in, e.g.
+//   https://www.instagram.com/p/ABC123xyz/ #timelapse #oilpainting
+//   https://www.tiktok.com/@lifeofseif/video/7400000000000000000

@@ -1,0 +1,65 @@
+# Pulls your TikTok (+ Instagram if a token is set) posts every day,
+# saves captions/hashtags/covers into the repo, then publishes the site
+# to GitHub Pages. Also runs on every push, and on demand from the
+# Actions tab ("Run workflow").
+name: Sync socials & publish
+
+on:
+  push:
+    branches: [ccr-4d012364-tldwm9, main]
+    paths-ignore: ["social/**", "assets/social/**"]
+  schedule:
+    - cron: "17 9 * * *"   # daily, 09:17 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: site
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --upgrade yt-dlp
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Pull posts and sort by hashtag
+        env:
+          INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
+        run: node scripts/sync-social.mjs
+      - name: Save new posts to the repo
+        run: |
+          git config user.name "portfolio-sync"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add social assets/social
+          if git diff --cached --quiet; then echo "Nothing new."; exit 0; fi
+          git commit -m "Sync social posts [skip ci]"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+  deploy:
+    needs: sync
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}   # includes the posts just synced
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4

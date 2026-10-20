@@ -21,17 +21,34 @@ export default {
     ],
   },
 
-  /* ---------- Social feeds ----------
-     tiktok:    your username → a "latest on TikTok" block that updates by itself
-     instagram: your username → a follow card linking to your profile
-     Set either to "" to hide it.
-     To show a specific post anywhere in Extras, add it as
-       { type: "tiktok",    url: "https://www.tiktok.com/@lifeofseif/video/123..." }
-       { type: "instagram", url: "https://www.instagram.com/p/ABC123/" }
-     Paintings can also link to the post they came from with  link: "<post url>".  */
+  /* ---------- Social feeds (auto-sorted) ----------
+     Every day a GitHub Action pulls your posts, keeps each caption +
+     hashtags and saves the cover images (see README → "Auto-sync").
+     The site then files each post into the FIRST section below whose
+     keywords match one of its #hashtags or a word in its caption.
+       match: ["timelapse", ...]   keywords, without the #
+       match: "*"                  everything that matched nothing else
+       inPaintings: true           also show these covers in Paintings
+                                   as a "Fresh from the feed" series
+     Change the keywords any time — no re-sync needed.
+     Hide a post: add its keyword to `hide`, or set "hidden": true on it
+     in social/feed.json.                                                 */
   social: {
     tiktok: "lifeofseif",
     instagram: "furballtbb",
+    limit: 80,                         // newest N posts to keep per sync
+    sort: [
+      { id: "timelapse",  title: "Timelapses", color: "#c6ff00", inPaintings: true,
+        match: ["timelapse", "speedpaint", "speedpainting", "speeddraw", "speeddrawing", "arttimelapse", "paintingtimelapse",
+                "drawingtimelapse", "process", "artprocess", "paintingprocess", "paintwithme", "drawwithme", "wip", "workinprogress"] },
+      { id: "paintings",  title: "Paintings",  color: "#ff3ea5", inPaintings: true,
+        match: ["painting", "paintings", "oilpainting", "acrylicpainting", "acrylic", "gouache", "watercolor", "watercolour",
+                "canvas", "painter", "artwork", "finishedpiece", "traditionalart", "fineart"] },
+      { id: "sketchbook", title: "Sketchbook", color: "#00e0ff",
+        match: ["sketchbook", "sketchbooktour", "sketch", "sketching", "sketches", "drawing", "doodle", "doodles", "ink", "pencil", "illustration"] },
+      { id: "more",       title: "More",       color: "#a77bff", match: "*" },
+    ],
+    hide: [],                          // e.g. ["personal", "ad"]
   },
 
   /* ---------- Look & feel ----------

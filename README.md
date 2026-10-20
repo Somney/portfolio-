@@ -76,6 +76,30 @@ In `content.js`, the `social` block holds your usernames (`lifeofseif` on TikTok
 
 Embeds only appear on the real site (GitHub Pages or your local preview), not inside the Claude Artifact preview.
 
+## Auto-sync: your posts, sorted by hashtag
+
+`.github/workflows/site.yml` runs every day, on every push, and whenever you press **Actions → Sync socials & publish → Run workflow**. It:
+
+1. Finds your newest TikToks (@lifeofseif) and reads each caption and its hashtags.
+2. Saves the cover images to `assets/social/` and the post list to `social/feed.json`.
+3. Publishes the site to GitHub Pages.
+
+The site sorts those posts into the **Videos** section, using the `social.sort` rules in `content.js`. A post goes into the first group whose keywords match one of its hashtags or a word in its caption. Groups marked `inPaintings: true` (Timelapses and Paintings by default) also fill the **Fresh from the feed** series in Paintings. Changing the rules takes effect right away, with no new sync needed.
+
+**Tag your posts consistently** (e.g. `#timelapse` on every timelapse, `#sketchbook` on sketchbook flips) and they sort themselves.
+
+- **Hide a post:** set `"hidden": true` on it in `social/feed.json`, or add one of its hashtags to `social.hide`.
+- **Rename a post:** edit its `title` in `social/feed.json` and add `"titleLocked": true` so the next sync doesn't overwrite it.
+- **Missing post or Instagram post:** paste its link into `social/links.txt`, optionally followed by hashtags.
+- **Automatic Instagram:** needs a creator/business account and an Instagram API token.
+  1. Create an app at developers.facebook.com and choose "Instagram API with Instagram Login".
+  2. Generate a token for @furballtbb.
+  3. In the repo, add it under **Settings → Secrets and variables → Actions** as `INSTAGRAM_TOKEN`.
+
+  The daily sync keeps the token from expiring.
+
+**Turn on publishing (one time):** go to **Settings → Pages** and set **Source** to **GitHub Actions**. The site is then at `https://somney.github.io/portfolio-/`.
+
 ## Change colours, name, hero
 
 - `artist`: your name, bio, email, socials.
@@ -96,7 +120,7 @@ python3 -m http.server 8000
 
 ## Publish free on GitHub Pages
 
-Go to repo **Settings → Pages**, set **Source** to "Deploy from a branch", choose your main branch and `/ (root)`, then save.
+Go to repo **Settings → Pages** and set **Source** to **GitHub Actions**. The workflow above then publishes the site on every push and every day.
 
 ---
 

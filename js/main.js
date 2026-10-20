@@ -3,9 +3,36 @@ import { $, $$, el, esc, clamp, smartImg, contrastOn, reducedMotion } from "./ut
 import { SplashBG, splashTransition } from "./splash.js";
 import { startDancer } from "./dancer.js";
 import { blip } from "./sound.js";
+import { sortPosts } from "./social-sort.js";
 
 const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [], social = {} } = content;
 const INK = theme.ink, PAPER = theme.paper, PAL = theme.palette;
+
+/* ---------- Social feed (written daily by the GitHub Action) ---------- */
+const feed = await fetch("social/feed.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+const buckets = sortPosts(feed?.posts || [], social.sort || [], { hide: social.hide || [] }).filter((b) => b.posts.length);
+const tagLine = (p, n = 3) => (p.tags || []).slice(0, n).map((t) => "#" + t).join(" ");
+const platformName = (p) => (p.platform === "instagram" ? "Instagram" : "TikTok");
+const fmtDate = (d) => { try { return new Date(d).toLocaleDateString(undefined, { month: "short", year: "numeric" }); } catch { return ""; } };
+function embedSrc(p, autoplay = false) {
+  if (p.platform === "tiktok") return `https://www.tiktok.com/player/v1/${p.id}?description=1&music_info=1&rel=0${autoplay ? "&autoplay=1" : ""}`;
+  const m = p.url.match(/instagram\.com\/(?:[\w.]+\/)?(p|reel|tv)\/([\w-]+)/);
+  return m ? `https://www.instagram.com/${m[1]}/${m[2]}/embed/captioned/` : null;
+}
+const postLink = (p) => `<a class="lb-link" href="${esc(p.url)}" target="_blank" rel="noopener">${p.platform === "instagram" ? "View on Instagram" : "Watch on TikTok"} ↗</a>`;
+const postLightbox = (posts, color) => posts.map((p) => ({
+  kind: "embed", post: p, src: p.image, title: p.title, color,
+  caption: `<strong>${esc(p.title || "Untitled")}</strong><span>${esc([fmtDate(p.date), tagLine(p, 6)].filter(Boolean).join(" · "))}</span>${postLink(p)}`,
+}));
+
+// newest covers from sections marked inPaintings → a paintings series
+const fresh = buckets.filter((b) => b.inPaintings).flatMap((b) => b.posts).filter((p) => p.image)
+  .sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 24);
+if (fresh.length) paintings.unshift({
+  id: "feed", title: "Fresh from the feed", color: PAL[3] || "#ff8a00", ink: INK,
+  blurb: `My latest pieces, pulled straight from ${[social.tiktok && "TikTok", feed?.posts?.some((p) => p.platform === "instagram") && "Instagram"].filter(Boolean).join(" & ")} and sorted by hashtag.`,
+  items: fresh.map((p) => ({ title: p.title || "Untitled", year: p.date?.slice(0, 4), medium: tagLine(p), image: p.image, post: p })),
+});
 
 /* ---------- Theme + text ---------- */
 const root = document.documentElement.style;
@@ -61,7 +88,11 @@ let lbList = [], lbIdx = 0;
 function lbShow() {
   const it = lbList[lbIdx], media = $(".lb-media", lb);
   media.innerHTML = "";
-  if (it.kind === "video") {
+  if (it.kind === "embed" && embedSrc(it.post)) {
+    const f = el("iframe", `lb-embed lb-embed--${it.post.platform}`);
+    f.src = embedSrc(it.post, true); f.allow = "autoplay; encrypted-media; fullscreen; picture-in-picture"; f.allowFullscreen = true;
+    f.title = it.title || "Post"; media.append(f);
+  } else if (it.kind === "video") {
     const yt = it.src.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{6,})/);
     if (yt) {
       const f = el("iframe"); f.src = `https://www.youtube-nocookie.com/embed/${yt[1]}?autoplay=1`;
@@ -111,6 +142,7 @@ paintings.forEach((s, i) => {
 });
 
 function seriesItems(s) {
+  if (s.id === "feed") return postLightbox(s.items.map((it) => it.post), s.color);
   return s.items.map((it) => ({
     kind: "image", src: it.image, title: it.title, color: s.color,
     caption: `<strong>${esc(it.title)}</strong><span>${[it.year, it.medium, it.size].filter(Boolean).map(esc).join(" · ")}</span>` +
@@ -223,6 +255,47 @@ let cfDragged = false;
 if (paintings.length) { paintSeriesText(); buildCoverflow(); $$(".series-tab")[0].classList.add("on"); }
 if (paintings.length < 2) tabs.hidden = true;
 
+/* ---------- Videos: posts sorted into tabs by hashtag ---------- */
+const vSec = $(".videos");
+if (!buckets.length) { vSec.hidden = true; $$('[data-nav="videos"]').forEach((a) => (a.hidden = true)); }
+else {
+  let vb = 0;
+  const vBG = new SplashBG($(".splash-bg", vSec), buckets[0].color || PAL[0], INK);
+  const vTabs = $(".video-tabs"), row = $(".vrow");
+  buckets.forEach((b, i) => {
+    const t = el("button", "series-tab", `<i style="background:${esc(b.color || PAL[i % PAL.length])}"></i>${esc(b.title)} <small>${b.posts.length}</small>`);
+    t.onclick = (e) => {
+      if (i === vb) return;
+      const r = vSec.getBoundingClientRect();
+      vBG.to(b.color || PAL[i % PAL.length], e.clientX - r.left, e.clientY - r.top, 850);
+      row.classList.add("out");
+      setTimeout(() => { vb = i; renderRow(); row.classList.remove("out"); }, 350);
+    };
+    vTabs.append(t);
+  });
+  function renderRow() {
+    const b = buckets[vb];
+    vSec.style.setProperty("--sec-ink", contrastOn(b.color || PAL[0], INK, PAPER));
+    $$(".series-tab", vTabs).forEach((t, i) => t.classList.toggle("on", i === vb));
+    row.innerHTML = ""; row.scrollLeft = 0;
+    const lbItems = postLightbox(b.posts, b.color);
+    b.posts.forEach((p, i) => {
+      const c = el("button", "vcard");
+      c.style.setProperty("--d", `${Math.min(i, 12) * 45}ms`);
+      const img = el("div", "vcard__img");
+      img.append(smartImg(p.image, { label: p.title || "", color: PAL[i % PAL.length], seed: p.id, kind: "extra" }));
+      img.insertAdjacentHTML("beforeend", `<span class="vcard__play">${p.platform === "instagram" && !p.video ? "◎" : "▶"}</span>`);
+      c.append(img);
+      c.insertAdjacentHTML("beforeend", `<strong>${esc(p.title || "Untitled")}</strong><span class="vcard__meta">${esc([fmtDate(p.date), platformName(p)].filter(Boolean).join(" · "))}</span><span class="vcard__tags">${esc(tagLine(p))}</span>`);
+      c.onclick = () => openLightbox(lbItems, i);
+      row.append(c);
+    });
+  }
+  renderRow();
+  $(".videos__meta").textContent = feed?.updated ? `Auto-sorted by hashtag · synced ${new Date(feed.updated).toLocaleDateString()}` : "";
+  $$(".vrow-arrow").forEach((a) => (a.onclick = () => row.scrollBy({ left: +a.dataset.dir * row.clientWidth * 0.8, behavior: "smooth" })));
+}
+
 /* ---------- Sketchbooks (3D, loaded when close to view) ---------- */
 const list = $(".shelf__list");
 sketchbooks.forEach((b) => {
@@ -331,6 +404,7 @@ function socialEmbed(url = "") {
 const SECTIONS = [
   { id: "home", label: "Home", color: () => PAL[heroIdx] },
   { id: "paintings", label: "Paintings", color: () => paintings[series]?.color || PAL[0] },
+  ...(buckets.length ? [{ id: "videos", label: "Videos", color: () => buckets[0].color || PAL[0] }] : []),
   { id: "sketchbooks", label: "Sketchbooks", color: () => INK, ink: () => PAL[1] },
   { id: "extras", label: "Extras", color: () => PAPER },
   { id: "contact", label: "Contact", color: () => PAL[1 % PAL.length] },
