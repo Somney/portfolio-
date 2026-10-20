@@ -205,19 +205,59 @@ async function findArt(p) {
    so the collection grows day by day. Carousels → all slides, videos →
    a frame from the end (finished piece), photos → the photo itself.     */
 const IG_APP = "936619743392459"; // instagram.com's public web app id
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const IG_UA_APP = "Instagram 309.1.0.41.113 Android (31/12; 420dpi; 1080x2220; samsung; SM-G991B; o1s; exynos2100; en_US; 541635890)";
+
+// Route 1: the JSON endpoint instagram.com's own page uses (fullest data).
+async function igApi(user) {
+  const tries = [
+    ["https://www.instagram.com", UA, IG_APP],
+    ["https://i.instagram.com", IG_UA_APP, "567067343352427"],
+  ];
+  const errs = [];
+  for (const [host, ua, app] of tries) {
+    const r = await fetch(`${host}/api/v1/users/web_profile_info/?username=${encodeURIComponent(user)}`, {
+      headers: { "user-agent": ua, "x-ig-app-id": app, accept: "*/*", "accept-language": "en-US,en;q=0.9", referer: `https://www.instagram.com/${user}/` },
+    }).catch((e) => ({ ok: false, status: e.message }));
+    if (!r.ok) { errs.push(`${host.slice(8)} ${r.status}`); continue; }
+    const u = (await r.json().catch(() => null))?.data?.user;
+    if (!u) { errs.push(`${host.slice(8)} no data`); continue; }
+    if (u.is_private) throw new Error("account is private");
+    return (u.edge_owner_to_timeline_media?.edges || []).map((e) => e.node);
+  }
+  throw new Error(errs.join(", "));
+}
+
+// Route 2: the public embed pages (what other websites load). Lists recent
+// post codes from the profile embed, then reads each post's embed page.
+async function igEmbedPost(code) {
+  const r = await fetch(`https://www.instagram.com/p/${code}/embed/captioned/`, { headers: { "user-agent": UA, "accept-language": "en-US,en;q=0.9" } });
+  if (!r.ok) throw new Error(`embed ${r.status}`);
+  const html = await r.text();
+  const dec = (t) => t.replace(/<br\s*\/?>/g, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+  const capM = html.match(/class="Caption"[^>]*>([\s\S]*?)<div class="CaptionComments/);
+  let caption = capM ? dec(capM[1]).replace(/^\S+\s*/, "") : "";           // drop the leading username
+  const img = (html.match(/class="EmbeddedMediaImage"[^>]+src="([^"]+)"/) || [])[1]?.replace(/&amp;/g, "&");
+  const ts = (html.match(/"taken_at_timestamp":(\d+)/) || [])[1];
+  return { shortcode: code, caption, display_url: img, taken_at_timestamp: ts ? +ts : null, is_video: /"is_video":true/.test(html) };
+}
+async function igEmbed(user) {
+  const r = await fetch(`https://www.instagram.com/${encodeURIComponent(user)}/embed/`, { headers: { "user-agent": UA, "accept-language": "en-US,en;q=0.9" } });
+  if (!r.ok) throw new Error(`profile embed ${r.status}`);
+  const html = (await r.text()).replace(/\\\//g, "/");
+  const codes = [...new Set([...html.matchAll(/\/(?:p|reel)\/([\w-]{6,})/g)].map((m) => m[1]))].slice(0, 24);
+  if (!codes.length) throw new Error("profile embed had no posts");
+  const out = [];
+  for (const c of codes) { try { out.push(await igEmbedPost(c)); } catch (e) { warn(`IG embed ${c}: ${e.message}`); } await sleep(800); }
+  return out.map((n) => ({ ...n, edge_media_to_caption: { edges: [{ node: { text: n.caption } }] } }));
+}
+
 async function igProfile(user) {
   const errs = [];
-  for (const host of ["https://www.instagram.com", "https://i.instagram.com"]) {
-    try {
-      const r = await fetch(`${host}/api/v1/users/web_profile_info/?username=${encodeURIComponent(user)}`, {
-        headers: { "user-agent": UA, "x-ig-app-id": IG_APP, accept: "*/*", "accept-language": "en-US,en;q=0.9", referer: `https://www.instagram.com/${user}/` },
-      });
-      if (!r.ok) { errs.push(`${host.slice(8)} HTTP ${r.status}`); continue; }
-      const u = (await r.json())?.data?.user;
-      if (!u) { errs.push(`${host.slice(8)} no user`); continue; }
-      if (u.is_private) throw new Error("account is private");
-      return u.edge_owner_to_timeline_media?.edges?.map((e) => e.node) || [];
-    } catch (e) { errs.push(`${host.slice(8)} ${e.message}`); }
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try { return await igApi(user); } catch (e) { errs.push(`api#${attempt}: ${e.message}`); if (/private/.test(e.message)) throw e; }
+    try { return await igEmbed(user); } catch (e) { errs.push(`embed#${attempt}: ${e.message}`); }
+    if (attempt < 3) await sleep(20_000 * attempt);
   }
   throw new Error(errs.join(" | "));
 }
