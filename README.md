@@ -91,12 +91,7 @@ The site sorts those posts into the **Videos** section, using the `social.sort` 
 - **Hide a post:** set `"hidden": true` on it in `social/feed.json`, or add one of its hashtags to `social.hide`.
 - **Rename a post:** edit its `title` in `social/feed.json` and add `"titleLocked": true` so the next sync doesn't overwrite it.
 - **Missing post or Instagram post:** paste its link into `social/links.txt`, optionally followed by hashtags.
-- **Automatic Instagram:** needs a creator/business account and an Instagram API token.
-  1. Create an app at developers.facebook.com and choose "Instagram API with Instagram Login".
-  2. Generate a token for @furballtbb.
-  3. In the repo, add it under **Settings → Secrets and variables → Actions** as `INSTAGRAM_TOKEN`.
-
-  The daily sync keeps the token from expiring.
+- **Instagram:** Instagram blocks automatic reading of a profile without logging in. The sync still tries every day, and keeps whatever it gets. The reliable way: paste a post's link (Share → Copy link) as a new line in `social/links.txt`. The next sync fills in its caption, hashtags and picture by itself and sorts it like your TikToks. An `INSTAGRAM_TOKEN` secret, if you ever set one up, pulls everything automatically.
 
 **Turn on publishing (one time):** go to **Settings → Pages** and set **Source** to **GitHub Actions**. The site is then at `https://somney.github.io/portfolio-/`.
 

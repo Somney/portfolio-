@@ -340,10 +340,23 @@ async function manualLinks(user) {
       const known = posts.get(`tiktok:${tt[2]}`);
       await enrichTikTok(tt[1] || user, { id: tt[2], caption: known?.caption, thumb: null, tags });
     } else if (ig) {
-      const id = ig[2];
-      const prev = posts.get(`instagram:${id}`);
-      upsert({ platform: "instagram", id, url: `https://www.instagram.com/${ig[1]}/${id}/`, caption: prev?.caption || rest.join(" "),
-        title: prev?.title || cleanTitle(rest.join(" ")), date: prev?.date || new Date().toISOString(), tags, embedOnly: !prev?.image });
+      const id = ig[2], prev = posts.get(`instagram:${id}`);
+      report.discovered++;
+      const p = { platform: "instagram", id, url: `https://www.instagram.com/p/${id}/`, tags };
+      if (!prev?.image) {
+        // fill caption, hashtags, date and picture from the post's public embed page
+        try {
+          const n = await igEmbedPost(id);
+          Object.assign(p, { caption: n.caption, title: cleanTitle(n.caption), video: n.is_video,
+            date: n.taken_at_timestamp ? new Date(n.taken_at_timestamp * 1000).toISOString() : new Date().toISOString() });
+          if (n.display_url) { p.image = await download(n.display_url, `${MEDIA}/instagram/${id}.jpg`); if (!n.is_video) p.art = p.image; }
+          log(`  instagram ${id}: ${hashtags(n.caption).map((t) => "#" + t).join(" ") || "(no hashtags)"}`);
+        } catch (e) {
+          warn(`instagram ${id}: ${e.message}`);
+          p.caption = rest.join(" "); p.title = cleanTitle(p.caption); p.date = new Date().toISOString(); p.embedOnly = true;
+        }
+      }
+      upsert(p);
     } else warn(`links.txt: not a TikTok/Instagram post link → ${url}`);
   }
 }
