@@ -135,46 +135,68 @@ async function enrichTikTok(user, v) {
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const TMP = path.join(ROOT, ".sync-tmp");
 
-async function slidesFromPage(p) {
+// TikTok's post page carries the post data (slides, video address) as JSON.
+async function pageItem(p) {
   const r = await fetch(p.url, { headers: { "user-agent": UA, "accept-language": "en-US,en;q=0.9" } });
+  const cookies = (r.headers.getSetCookie?.() || []).map((c) => c.split(";")[0]).join("; ");
   const html = await r.text();
   const m = html.match(/<script[^>]+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/);
-  if (!m) throw new Error("no page data");
+  if (!m) throw new Error(`no page data (HTTP ${r.status})`);
   const item = JSON.parse(m[1]).__DEFAULT_SCOPE__?.["webapp.video-detail"]?.itemInfo?.itemStruct;
-  const imgs = (item?.imagePost?.images || []).map((i) => {
-    const list = i.imageURL?.urlList || [];
-    return list.find((u) => /jpe?g/i.test(u)) || list[0];
-  }).filter(Boolean);
-  return imgs.slice(0, 12);
+  if (!item) throw new Error("post data missing from page");
+  return { item, cookies };
 }
 
-async function finalFrame(p) {
-  await fs.mkdir(TMP, { recursive: true });
-  const vid = path.join(TMP, `${p.id}.mp4`);
-  await run("yt-dlp", ["-q", "--no-warnings", "-f", "b[height<=1080][ext=mp4]/b[ext=mp4]/b", "-o", vid, p.url], { timeout: 180_000 });
+async function frameFromFile(p, file) {
   const rel = `${MEDIA}/tiktok/${p.id}-final.jpg`;
   await fs.mkdir(path.join(ROOT, path.dirname(rel)), { recursive: true });
   // 0.4s before the end: past the drawing, before any end-card fade
-  await run("ffmpeg", ["-y", "-loglevel", "error", "-sseof", "-0.4", "-i", vid, "-frames:v", "1", "-q:v", "3", path.join(ROOT, rel)], { timeout: 60_000 });
-  await fs.rm(vid, { force: true });
+  await run("ffmpeg", ["-y", "-loglevel", "error", "-sseof", "-0.4", "-i", file, "-frames:v", "1", "-q:v", "3", path.join(ROOT, rel)], { timeout: 60_000 });
   return rel;
 }
 
+async function videoFromPage(p, item, cookies) {
+  const v = item.video || {};
+  const src = v.playAddr || v.downloadAddr || v.bitrateInfo?.[0]?.PlayAddr?.UrlList?.[0];
+  if (!src) throw new Error("no video address on page");
+  const r = await fetch(src, { headers: { "user-agent": UA, referer: "https://www.tiktok.com/", cookie: cookies, range: "bytes=0-" } });
+  if (!r.ok) throw new Error(`video HTTP ${r.status}`);
+  await fs.mkdir(TMP, { recursive: true });
+  const file = path.join(TMP, `${p.id}.mp4`);
+  await fs.writeFile(file, Buffer.from(await r.arrayBuffer()));
+  try { return await frameFromFile(p, file); } finally { await fs.rm(file, { force: true }); }
+}
+
+async function videoFromYtdlp(p) {
+  await fs.mkdir(TMP, { recursive: true });
+  const file = path.join(TMP, `${p.id}.mp4`);
+  await run("yt-dlp", ["-q", "--no-warnings", "-f", "b[height<=1080][ext=mp4]/b[ext=mp4]/b", "-o", file, p.url], { timeout: 180_000 });
+  try { return await frameFromFile(p, file); } finally { await fs.rm(file, { force: true }); }
+}
+
 async function findArt(p) {
-  if (p.platform !== "tiktok" || p.artLocked || p.artTried) return;
-  p.artTried = true;
-  try {
-    const slides = await slidesFromPage(p);
-    if (slides.length) {
-      p.slides = [];
-      for (const [i, u] of slides.entries()) {
-        try { p.slides.push(await download(u, `${MEDIA}/tiktok/${p.id}-${i + 1}.jpg`)); } catch (e) { warn(`slide ${i + 1} of ${p.id}: ${e.message}`); }
-      }
-      if (p.slides.length) { p.art = p.slides[p.slides.length > 1 ? 1 : 0]; log(`  slides ${p.id}: ${p.slides.length}`); return; }
+  if (p.platform !== "tiktok" || p.artLocked || p.art) return;
+  const errors = [];
+  let page = null;
+  try { page = await pageItem(p); } catch (e) { errors.push(`page: ${e.message}`); }
+  const slides = (page?.item?.imagePost?.images || []).map((i) => {
+    const list = i.imageURL?.urlList || [];
+    return list.find((u) => /jpe?g/i.test(u)) || list[0];
+  }).filter(Boolean).slice(0, 12);
+  if (slides.length) {
+    p.slides = [];
+    for (const [i, u] of slides.entries()) {
+      try { p.slides.push(await download(u, `${MEDIA}/tiktok/${p.id}-${i + 1}.jpg`)); } catch (e) { errors.push(`slide ${i + 1}: ${e.message}`); }
     }
-  } catch (e) { /* not a slideshow, or page blocked — try as a video */ }
-  try { p.art = await finalFrame(p); log(`  final frame ${p.id}`); }
-  catch (e) { warn(`no artwork image for ${p.id}: ${String(e.stderr || e.message).trim().split("\n").at(-1)}`); }
+    if (p.slides.length) { p.art = p.slides[p.slides.length > 1 ? 1 : 0]; log(`  slides ${p.id}: ${p.slides.length}`); }
+  } else {
+    if (page) { try { p.art = await videoFromPage(p, page.item, page.cookies); } catch (e) { errors.push(`video: ${e.message}`); } }
+    if (!p.art) { try { p.art = await videoFromYtdlp(p); } catch (e) { errors.push(`yt-dlp: ${String(e.stderr || e.message).trim().split("\n").at(-1).slice(0, 120)}`); } }
+    if (p.art) log(`  final frame ${p.id}`);
+  }
+  if (!p.art) { p.artFails = (p.artFails || 0) + 1; warn(`no artwork image for ${p.id} (try ${p.artFails}/3): ${errors.join(" | ")}`); }
+  else delete p.artFails;
+  delete p.artTried;
 }
 
 /* ---------- Instagram (optional, needs a token) ---------- */
@@ -244,7 +266,7 @@ const { sortPosts } = await import("../js/social-sort.js");
 if (!fixture && !args.includes("--no-art")) {
   const forPaintings = sortPosts([...posts.values()], cfg.sort || [], { hide: cfg.hide || [] })
     .filter((b) => b.inPaintings).flatMap((b) => b.posts);
-  const todo = forPaintings.filter((p) => !p.artTried && !p.artLocked);
+  const todo = forPaintings.filter((p) => !p.art && !p.artLocked && (p.artFails || 0) < 3);
   if (todo.length) log(`Finding finished-artwork images for ${todo.length} post(s)…`);
   for (const p of todo) await findArt(p);
   await fs.rm(TMP, { recursive: true, force: true });
