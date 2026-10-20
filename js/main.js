@@ -258,7 +258,8 @@ const ICON = { image: "◉", video: "▶", link: "↗", text: "✎" };
 const extraMedia = extras.filter((x) => x.type === "image" || x.type === "video");
 extras.forEach((x, i) => {
   const color = PAL[i % PAL.length];
-  const card = el(x.type === "text" ? "div" : "button", `x-card x-card--${x.type}`);
+  const card = el(x.type === "text" ? "div" : x.type === "link" ? "a" : "button", `x-card x-card--${x.type}`);
+  if (x.type === "link") { card.href = x.url; if (!x.url.startsWith("mailto:")) { card.target = "_blank"; card.rel = "noopener"; } }
   card.style.setProperty("--card", color);
   card.style.setProperty("--tilt", `${((i * 37) % 7) - 3}deg`);
   if (x.type === "text") {
@@ -271,7 +272,7 @@ extras.forEach((x, i) => {
     }
     card.insertAdjacentHTML("beforeend", `<span class="x-badge">${ICON[x.type] || "★"}</span><h3>${esc(x.title)}</h3>${x.caption ? `<p>${esc(x.caption)}</p>` : ""}`);
     card.onclick = () => {
-      if (x.type === "link") return window.open(x.url, x.url.startsWith("mailto:") ? "_self" : "_blank", "noopener");
+      if (x.type === "link") return;
       const items = extraMedia.map((m, j) => ({
         kind: m.type === "video" ? "video" : "image", src: m.type === "video" ? m.url : m.image, title: m.title,
         color: PAL[extras.indexOf(m) % PAL.length], caption: `<strong>${esc(m.title)}</strong><span>${esc(m.caption || "")}</span>`,

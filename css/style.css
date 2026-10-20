@@ -171,13 +171,13 @@ section, footer { position: relative; }
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
 }
 .x-card {
-  --card: var(--c0);
+  --card: var(--c0); text-decoration: none; display: block;
   position: relative; text-align: left; border: 3px solid var(--ink); border-radius: 22px; padding: 12px 12px 18px;
   background: var(--card); color: var(--ink); box-shadow: 8px 8px 0 var(--ink);
   rotate: var(--tilt); transition: rotate .3s cubic-bezier(.2,1.6,.4,1), translate .3s, box-shadow .3s;
 }
 .x-card.reveal.in { transform: none; }
-button.x-card:hover { rotate: 0deg; translate: -4px -6px; box-shadow: 14px 14px 0 var(--ink); }
+button.x-card:hover, a.x-card:hover { rotate: 0deg; translate: -4px -6px; box-shadow: 14px 14px 0 var(--ink); }
 .x-media { aspect-ratio: 1; border-radius: 14px; overflow: hidden; border: 3px solid var(--ink); background: var(--ink); margin-bottom: 12px; }
 .x-media img { width: 100%; height: 100%; object-fit: cover; }
 .x-media--glyph { display: grid; place-items: center; background: var(--chrome); }
