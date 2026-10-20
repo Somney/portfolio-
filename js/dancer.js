@@ -13,7 +13,7 @@ import { reducedMotion } from "./util.js";
 /* ---------------- sprite space (low-res pixels, y up from the floor) -------- */
 const LW = 160, LH = 150, FLOOR = 144;          // canvas size + floor line (screen y)
 const BPM = 112;
-const L = { thigh: 21, shin: 21, ankle: 3, spine: 29, chest: 18, neck: 15, upper: 15.5, fore: 15, head: 12.5 };
+const L = { thigh: 21.5, shin: 21, ankle: 3, spine: 29, chest: 18, neck: 13.5, upper: 15, fore: 14, head: 10.5 };
 
 /* ---------------- tiny math kit ---------------- */
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -134,13 +134,14 @@ function rigPoints(P) {
   const neck = add(add(hip, rot(L.spine, P.lean)), V(P.roll * 0.6, 0));
   const headAng = P.lean * 1.4 + P.tilt;
   const head = add(neck, rot(L.neck, headAng + P.nod * 0.5));
-  const shN = add(neck, V(1.5, -4)), shF = add(neck, V(-2, -3));
+  const shN = add(neck, V(2, -4.5)), shF = add(neck, V(-3, -3.5));
   const hpN = add(hip, V(2, -1)), hpF = add(hip, V(-2.5, -1));
   const ankN = V(P.fN.x, P.fN.y + Math.sin(P.tN) * 9), ankF = V(P.fF.x, P.fF.y + Math.sin(P.tF) * 9);
   const legN = ik(hpN, ankN, L.thigh, L.shin, kneeFwd), legF = ik(hpF, ankF, L.thigh, L.shin, kneeFwd);
-  const podHand = add(chest, P.pod);
+  // the iPod is held out in front at belly height: elbow at the side, forearm forward
+  const podHand = add(chest, V(P.pod.x + 6, P.pod.y - 6));
   const armN = ik(shN, podHand, L.upper, L.fore, elbowDown), armF = ik(shF, P.hand, L.upper, L.fore, elbowDown);
-  return { hip, chest, neck, head, headAng: headAng + P.nod, shN, shF, hpN, hpF, legN, legF, armN, armF };
+  return { hip, chest, neck, head, headAng: headAng + P.nod, shN, shF, hpN, hpF, legN, legF, armN, armF, podHand };
 }
 
 function makeDrawer(g) {  // g is swapped to a scratch canvas while building front parts
@@ -160,9 +161,9 @@ function makeDrawer(g) {  // g is swapped to a scratch canvas while building fro
     // rounded sneaker: heel at -3, toe at +10, sole 3 below the ankle; rotates around the ankle
     const pts = [];
     const push = (x, y) => { const c = Math.cos(-lift), s = Math.sin(-lift); pts.push(V(ank.x + x * c - y * s, ank.y + x * s + y * c)); };
-    push(-4, -3); push(9, -3);
-    for (let i = 0; i <= 6; i++) { const a = -Math.PI / 2 + (i / 6) * Math.PI; push(9 + Math.cos(a) * 2.6, -0.4 + Math.sin(a) * 2.6); }
-    push(1, 3.2); push(-4, 2.5);
+    push(-5, -3); push(10, -3);                                       // thick flat sole
+    for (let i = 0; i <= 6; i++) { const a = -Math.PI / 2 + (i / 6) * Math.PI; push(10 + Math.cos(a) * 3, 0 + Math.sin(a) * 3); }
+    push(5, 3.4); push(1, 4.6); push(-3.5, 4); push(-5, 1.5);         // high-top collar
     g.beginPath(); pts.forEach((p, i) => { const [x, y] = sp(p); i ? g.lineTo(x, y) : g.moveTo(x, y); });
     g.closePath(); g.fill();
   }
@@ -185,25 +186,41 @@ function makeDrawer(g) {  // g is swapped to a scratch canvas while building fro
     S = { cx: LW / 2 + P.rootX, ct: Math.cos(P.turn) };
     const hd = (x, y) => add(R.head, add(rot(y, R.headAng), rot(x, R.headAng + Math.PI / 2)));
 
-    paint(lay.farLeg, () => { capsule(R.hpF, R.legF.joint, 4.6, 3.8); capsule(R.legF.joint, R.legF.end, 3.8, 3.2); shoe(R.legF.end, P.tF); });
-    paint(lay.nearLeg, () => { capsule(R.hpN, R.legN.joint, 4.8, 3.9); capsule(R.legN.joint, R.legN.end, 3.9, 3.3); shoe(R.legN.end, P.tN); });
-    paint(lay.farArm, () => { capsule(R.shF, R.armF.joint, 3.6, 3.1); capsule(R.armF.joint, R.armF.end, 3.1, 2.7); circle(R.armF.end, 3.9); });
-    paint(lay.nearArm, () => { capsule(R.shN, R.armN.joint, 3.7, 3.2); capsule(R.armN.joint, R.armN.end, 3.2, 2.8); circle(R.armN.end, 3.9); });
+    // helpers in head space (x = toward the face, y = up) and limb space
+    const poly = (pts) => { g.beginPath(); pts.forEach((q, i) => { const [x, y] = sp(q); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.fill(); };
+    const hpoly = (pts) => poly(pts.map(([x, y]) => hd(x, y)));
+    const mitt = (end, from, r, thumbSide) => {                         // hand with a thumb
+      circle(end, r);
+      const dx = end.x - from.x, dy = end.y - from.y, l = Math.hypot(dx, dy) || 1;
+      circle(add(end, V((-dy / l) * r * 0.9 * thumbSide + (dx / l) * 0.6, (dx / l) * r * 0.9 * thumbSide + (dy / l) * 0.6)), r * 0.45);
+    };
+
+    // skinny jeans + high-tops
+    paint(lay.farLeg, () => { capsule(R.hpF, R.legF.joint, 4.3, 3.4); capsule(R.legF.joint, R.legF.end, 3.4, 2.7); shoe(R.legF.end, P.tF); });
+    paint(lay.nearLeg, () => { capsule(R.hpN, R.legN.joint, 4.5, 3.5); capsule(R.legN.joint, R.legN.end, 3.5, 2.8); shoe(R.legN.end, P.tN); });
+    // hoodie sleeves + hands
+    paint(lay.farArm, () => { capsule(R.shF, R.armF.joint, 3.7, 3.1); capsule(R.armF.joint, R.armF.end, 3.1, 2.5); mitt(R.armF.end, R.armF.joint, 3, 1); });
+    paint(lay.nearArm, () => { capsule(R.shN, R.armN.joint, 3.8, 3.2); capsule(R.armN.joint, R.armN.end, 3.2, 2.6); circle(R.armN.end, 3); });
     paint(lay.body, () => {
-      capsule(R.hip, R.chest, 7.8, 9.6); capsule(R.chest, R.neck, 9.6, 6.2); capsule(R.hpF, R.hpN, 6.2, 6.2);
-      capsule(R.neck, R.head, 3.6, 3.6);
+      // hoodie: broad shoulders, slim waist, open jacket flaps at the hem
+      capsule(R.hip, R.chest, 6.6, 8.6); capsule(R.chest, R.neck, 8.6, 7.6); capsule(R.hpF, R.hpN, 5.6, 5.6);
+      poly([add(R.hip, V(-6.5, 3)), add(R.hip, V(-7.8, -5.5)), add(R.hip, V(-1, -2.5))]);   // back flap
+      poly([add(R.hip, V(4.5, 3)), add(R.hip, V(8.2, -5)), add(R.hip, V(1.5, -2))]);        // front flap
+      circle(add(R.neck, V(-5.2, 0.5)), 4.4);                                                 // hood bunched at the nape
+      capsule(R.neck, R.head, 3.2, 3.4);
+      // face in profile: forehead, brow, nose, lips, chin, jaw
       circle(R.head, L.head);
-      circle(hd(11.4, -2.2), 3.9);                                         // nose
-      // backwards cap: the head is the crown, the brim sticks out behind
-      const brim = [hd(-6, 10.5), hd(-17.5, 7.5), hd(-18.5, 5.2), hd(-8, 6.2)];
-      g.beginPath(); brim.forEach((q, i) => { const [x, y] = sp(q); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.fill();
-      circle(hd(-1.5, 12.6), 1.6);                                       // cap button
-      circle(hd(-10.5, -4), 3.2);                                        // back-of-head hair tuft
+      hpoly([[3, 8], [8.6, 5.4], [9.4, 3.2], [12.6, -0.6], [9.6, -2], [10.4, -3.6], [9.2, -4.8], [9.8, -6.4], [8, -8.6], [3.5, -10], [-3, -8], [-6, -3]]);
+      // shaggy, spiky hair: bangs over the brow, volume on top, locks at the nape
+      hpoly([[6, 3.2], [12, 3.6], [9.6, 6.6], [13.6, 8.2], [8.4, 9.8], [10.4, 14], [4.2, 12.4], [3.4, 17.6], [-1.6, 13.4],
+             [-5.6, 17], [-7, 11.6], [-13.6, 12.4], [-10.6, 7.4], [-16, 5.2], [-11.4, 2.4], [-14.6, -2.6], [-9.2, -1.4],
+             [-9.6, -6.6], [-5.6, -3], [-1, 4.5]]);
     });
-    // eye: negative space
+    // big anime eye: negative space under the bangs
     const eg = lay.body.getContext("2d");
-    eg.globalCompositeOperation = "destination-out"; g = eg; circle(hd(5.4, 2.9), 1.75); g = main;
-    eg.globalCompositeOperation = "source-over";
+    eg.globalCompositeOperation = "destination-out"; g = eg;
+    hpoly([[4.6, 2.6], [7.6, 2.2], [7.4, -0.2], [5, 0]]);
+    g = main; eg.globalCompositeOperation = "source-over";
 
     // composite back → front
     g.clearRect(0, 0, LW, LH);
@@ -211,22 +228,32 @@ function makeDrawer(g) {  // g is swapped to a scratch canvas while building fro
     cut(g, lay.nearLeg); g.drawImage(lay.nearLeg, 0, 0);          // legs separate from each other
     cut(lay.farArm, lay.body);                                     // far arm tucks behind the body
     g.drawImage(lay.farArm, 0, 0); g.drawImage(lay.body, 0, 0);
-    g.drawImage(lay.nearArm, 0, 0);                                 // iPod arm merges into the chest like a real silhouette
+    cut(g, lay.nearArm); g.drawImage(lay.nearArm, 0, 0);          // iPod arm reads in front of the hoodie
 
-    // iPod (white body, ink screen + wheel ring)
-    const hand = R.armN.end, [px, py] = sp(V(hand.x + 1.5, hand.y + 4));
-    g.fillStyle = "#fff"; g.beginPath(); g.roundRect(px - 4, py - 6, 8, 12, 1.6); g.fill();
-    g.fillStyle = "#000"; g.fillRect(px - 2.6, py - 4.6, 5.2, 4);
-    g.strokeStyle = "#000"; g.lineWidth = 1.1; g.beginPath(); g.arc(px, py + 2.6, 1.9, 0, Math.PI * 2); g.stroke();
+    // iPod held in the hand: white body (screen + click wheel), ink fingers
+    // wrapping the back edge and a thumb resting on the front — clearly gripped
+    const hand = R.armN.end, [hx, hy] = sp(hand), dir = S.ct >= 0 ? 1 : -1;
+    const px = hx + 2.6 * dir, py = hy - 3.2;
+    g.globalCompositeOperation = "destination-out";               // 1px gap so the iPod pops off the body
+    g.beginPath(); g.roundRect(px - 6.2, py - 9, 12.4, 17.4, 2.6); g.fill();
+    g.globalCompositeOperation = "source-over";
+    g.fillStyle = "#000";
+    g.beginPath(); g.arc(px + 2.4 * dir, py + 8.4, 2.8, 0, Math.PI * 2); g.fill();         // palm cupping the base
+    g.fillStyle = "#fff"; g.beginPath(); g.roundRect(px - 5, py - 7.8, 10, 15.2, 2); g.fill();  // iPod body
+    g.fillStyle = "#000"; g.fillRect(px - 3, py - 6, 6, 4.4);                                  // screen
+    g.strokeStyle = "#000"; g.lineWidth = 1; g.beginPath(); g.arc(px, py + 2.6, 2.5, 0, Math.PI * 2); g.stroke(); // click wheel
+    g.fillStyle = "#000";
+    for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(px + 5.4 * dir, py - 0.6 + i * 2.7, 1.35, 0, Math.PI * 2); g.fill(); } // fingers wrap the edge
+    g.beginPath(); g.ellipse(px - 5.2 * dir, py + 1.6, 1.25, 2.3, 0.35 * dir, 0, Math.PI * 2); g.fill();                     // thumb on the side
 
-    // earbuds → Y just under the chin → down to the iPod
-    const ear = hd(-3.4, -2.8), back = hd(-9, -6), split = add(R.neck, V(4.5 , -5));
+    // earbuds → Y just under the chin → into the top of the iPod
+    const ear = hd(-3, -1.4), back = hd(-7.5, -6), split = add(R.neck, V(3.5, -8));
     const [ex, ey] = sp(ear), [bx, by] = sp(back), [sx, sy] = sp(split);
     g.strokeStyle = "#fff"; g.lineWidth = 1.3; g.lineCap = "round";
-    g.beginPath(); g.moveTo(ex, ey); g.quadraticCurveTo(ex + 2 * S.ct, (ey + sy) / 2, sx, sy); g.stroke();
+    g.beginPath(); g.moveTo(ex, ey); g.bezierCurveTo(ex - 0.5 * S.ct, ey - 7, sx - 3 * S.ct, sy + 3, sx, sy); g.stroke();   // hangs behind the jaw
     g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + 3 * S.ct, sy - 1, sx, sy); g.stroke();
-    g.beginPath(); g.moveTo(sx, sy); g.bezierCurveTo(sx + 1 * S.ct, sy + 7, px + 6 * S.ct, py - 3, px, py - 6); g.stroke();
-    g.fillStyle = "#fff"; g.beginPath(); g.arc(ex, ey, 1.9, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.moveTo(sx, sy); g.bezierCurveTo(sx + 1 * S.ct, sy + 8, px - 2 * dir, py - 12, px - 1.5 * dir, py - 7.6); g.stroke();
+    g.fillStyle = "#fff"; g.beginPath(); g.arc(ex, ey, 1.8, 0, Math.PI * 2); g.fill();
   };
 }
 
