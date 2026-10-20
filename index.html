@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Portfolio</title>
+  <meta name="description" content="Paintings, sketchbooks and extras." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rubik+Mono+One&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./js/vendor/three.module.min.js" } }
+  </script>
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <a class="logo" href="#home" data-nav="home"></a>
+    <nav class="toplinks">
+      <a href="#paintings" data-nav="paintings">Paintings</a>
+      <a href="#sketchbooks" data-nav="sketchbooks">Sketchbooks</a>
+      <a href="#extras" data-nav="extras">Extras</a>
+      <a href="#contact" data-nav="contact">Contact</a>
+    </nav>
+    <button class="ipod-btn" aria-label="Open menu" title="Menu">
+      <span class="ipod-btn__screen"></span><span class="ipod-btn__wheel"></span>
+    </button>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section id="home" class="hero" data-section>
+      <canvas class="splash-bg"></canvas>
+      <canvas class="hero__dancer"></canvas>
+      <div class="hero__text">
+        <p class="hero__kicker">portfolio</p>
+        <h1 class="hero__name"></h1>
+        <div class="hero__words"><span></span></div>
+        <p class="hero__tagline"></p>
+      </div>
+      <a class="hero__scroll" href="#paintings" data-nav="paintings">scroll ↓</a>
+    </section>
+
+    <div class="marquee" aria-hidden="true"><div class="marquee__track"></div></div>
+
+    <!-- PAINTINGS -->
+    <section id="paintings" class="paintings" data-section>
+      <canvas class="splash-bg"></canvas>
+      <div class="sec-head">
+        <h2 class="sec-title">Paintings</h2>
+        <div class="series-tabs" role="tablist"></div>
+      </div>
+      <div class="series-info">
+        <h3 class="series-info__title"></h3>
+        <p class="series-info__blurb"></p>
+      </div>
+      <div class="coverflow" tabindex="0" aria-label="Paintings carousel">
+        <div class="coverflow__stage"></div>
+      </div>
+      <div class="cf-caption">
+        <button class="cf-arrow" data-dir="-1" aria-label="Previous">◀◀</button>
+        <div class="cf-caption__text"><strong></strong><span></span></div>
+        <button class="cf-arrow" data-dir="1" aria-label="Next">▶▶</button>
+      </div>
+    </section>
+
+    <!-- SKETCHBOOKS -->
+    <section id="sketchbooks" class="sketchbooks" data-section>
+      <div class="sec-head sec-head--dark">
+        <h2 class="sec-title">Sketchbooks</h2>
+        <p class="sec-sub">pick one up — tap a book to flip through it</p>
+      </div>
+      <div class="shelf">
+        <canvas class="shelf__canvas"></canvas>
+        <div class="shelf__label" hidden><strong></strong><span></span></div>
+      </div>
+      <ul class="shelf__list" aria-label="Sketchbook list"></ul>
+    </section>
+
+    <!-- EXTRAS -->
+    <section id="extras" class="extras" data-section>
+      <div class="sec-head">
+        <h2 class="sec-title">Extras</h2>
+        <p class="sec-sub">bits, bobs &amp; everything else</p>
+      </div>
+      <div class="extras__grid"></div>
+    </section>
+
+    <!-- CONTACT -->
+    <footer id="contact" class="contact" data-section>
+      <h2 class="contact__big">say hi</h2>
+      <p class="contact__bio"></p>
+      <a class="contact__email" href="#"></a>
+      <div class="contact__socials"></div>
+      <p class="contact__fine">© <span class="year"></span> <span class="contact__name"></span></p>
+    </footer>
+  </main>
+
+  <!-- iPod navigation -->
+  <div class="ipod" hidden>
+    <div class="ipod__body">
+      <div class="ipod__screen">
+        <div class="ipod__bar"><span>Menu</span><span class="ipod__batt"></span></div>
+        <ul class="ipod__list"></ul>
+      </div>
+      <div class="wheel">
+        <button class="wheel__lbl wheel__lbl--top" data-act="menu">MENU</button>
+        <button class="wheel__lbl wheel__lbl--left" data-act="prev">◀◀</button>
+        <button class="wheel__lbl wheel__lbl--right" data-act="next">▶▶</button>
+        <button class="wheel__lbl wheel__lbl--bottom" data-act="select">▶❚❚</button>
+        <button class="wheel__center" data-act="select" aria-label="Select"></button>
+      </div>
+    </div>
+    <p class="ipod__hint">spin the wheel · click the centre</p>
+  </div>
+
+  <!-- Lightbox (paintings / extras) -->
+  <div class="lightbox" hidden>
+    <button class="lb-close" aria-label="Close">✕</button>
+    <button class="lb-nav lb-prev" aria-label="Previous">◀</button>
+    <figure class="lb-fig">
+      <div class="lb-media"></div>
+      <figcaption class="lb-cap"></figcaption>
+    </figure>
+    <button class="lb-nav lb-next" aria-label="Next">▶</button>
+  </div>
+
+  <!-- Sketchbook flip viewer -->
+  <div class="viewer" hidden>
+    <canvas class="viewer__canvas"></canvas>
+    <div class="viewer__top">
+      <div class="viewer__title"><strong></strong><span></span></div>
+      <div class="viewer__tools">
+        <button class="vbtn" data-act="zoom" title="Zoom (or double-tap a page)">⌕</button>
+        <button class="vbtn" data-act="sound" title="Page sounds">♪</button>
+        <button class="vbtn" data-act="close" title="Close (Esc)">✕</button>
+      </div>
+    </div>
+    <div class="viewer__bottom">
+      <button class="vbtn vbtn--big" data-act="prev" aria-label="Previous page">◀</button>
+      <div class="viewer__count"></div>
+      <button class="vbtn vbtn--big" data-act="next" aria-label="Next page">▶</button>
+    </div>
+    <p class="viewer__hint">drag a page corner · tap the edges · ← → keys</p>
+  </div>
+
+  <!-- Full-screen paint splash used between sections -->
+  <canvas class="splash-overlay"></canvas>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
