@@ -199,6 +199,68 @@ async function findArt(p) {
   delete p.artTried;
 }
 
+/* ---------- Instagram, no token: read the public profile ----------
+   Uses the same public endpoint instagram.com's own web page uses. It
+   returns the newest ~12 posts; older ones stay saved from earlier runs,
+   so the collection grows day by day. Carousels → all slides, videos →
+   a frame from the end (finished piece), photos → the photo itself.     */
+const IG_APP = "936619743392459"; // instagram.com's public web app id
+async function igProfile(user) {
+  const errs = [];
+  for (const host of ["https://www.instagram.com", "https://i.instagram.com"]) {
+    try {
+      const r = await fetch(`${host}/api/v1/users/web_profile_info/?username=${encodeURIComponent(user)}`, {
+        headers: { "user-agent": UA, "x-ig-app-id": IG_APP, accept: "*/*", "accept-language": "en-US,en;q=0.9", referer: `https://www.instagram.com/${user}/` },
+      });
+      if (!r.ok) { errs.push(`${host.slice(8)} HTTP ${r.status}`); continue; }
+      const u = (await r.json())?.data?.user;
+      if (!u) { errs.push(`${host.slice(8)} no user`); continue; }
+      if (u.is_private) throw new Error("account is private");
+      return u.edge_owner_to_timeline_media?.edges?.map((e) => e.node) || [];
+    } catch (e) { errs.push(`${host.slice(8)} ${e.message}`); }
+  }
+  throw new Error(errs.join(" | "));
+}
+
+async function igFrame(id, videoUrl) {
+  await fs.mkdir(TMP, { recursive: true });
+  const file = path.join(TMP, `ig-${id}.mp4`);
+  const r = await fetch(videoUrl, { headers: { "user-agent": UA, referer: "https://www.instagram.com/" } });
+  if (!r.ok) throw new Error(`video HTTP ${r.status}`);
+  await fs.writeFile(file, Buffer.from(await r.arrayBuffer()));
+  const rel = `${MEDIA}/instagram/${id}-final.jpg`;
+  await fs.mkdir(path.join(ROOT, path.dirname(rel)), { recursive: true });
+  try { await run("ffmpeg", ["-y", "-loglevel", "error", "-sseof", "-0.4", "-i", file, "-frames:v", "1", "-q:v", "3", path.join(ROOT, rel)], { timeout: 60_000 }); }
+  finally { await fs.rm(file, { force: true }); }
+  return rel;
+}
+
+async function syncInstagramPublic(user) {
+  let nodes;
+  try { nodes = await igProfile(user); }
+  catch (e) { warn(`Instagram @${user}: couldn't read the public profile (${e.message}). Saved posts are kept.`); report.errors.push("instagram"); return; }
+  log(`Instagram @${user}: found ${nodes.length} post(s)`);
+  for (const n of nodes) {
+    report.discovered++;
+    const code = n.shortcode, prev = posts.get(`instagram:${code}`);
+    const caption = n.edge_media_to_caption?.edges?.[0]?.node?.text || "";
+    const p = { platform: "instagram", id: code, url: `https://www.instagram.com/p/${code}/`, caption, title: cleanTitle(caption),
+      date: n.taken_at_timestamp ? new Date(n.taken_at_timestamp * 1000).toISOString() : null, video: !!n.is_video };
+    try {
+      if (!prev?.image) p.image = await download(n.display_url, `${MEDIA}/instagram/${code}.jpg`);
+      const kids = n.edge_sidecar_to_children?.edges?.map((e) => e.node) || [];
+      if (kids.length > 1 && !prev?.slides) {
+        p.slides = [];
+        for (const [i, k] of kids.entries()) if (!k.is_video) p.slides.push(await download(k.display_url, `${MEDIA}/instagram/${code}-${i + 1}.jpg`));
+        p.art = p.slides[0];
+      } else if (n.is_video && n.video_url && !prev?.art) {
+        try { p.art = await igFrame(code, n.video_url); } catch (e) { warn(`IG end frame ${code}: ${e.message}`); }
+      } else if (!n.is_video) p.art = prev?.art || p.image || prev?.image;
+    } catch (e) { warn(`IG media ${code}: ${e.message}`); }
+    upsert(p);
+  }
+}
+
 /* ---------- Instagram (optional, needs a token) ---------- */
 async function syncInstagram(token) {
   try {
@@ -259,7 +321,7 @@ if (tt) {
   }
 }
 if (process.env.INSTAGRAM_TOKEN) await syncInstagram(process.env.INSTAGRAM_TOKEN);
-else if (cfg.instagram) log("Instagram: no INSTAGRAM_TOKEN set — using social/links.txt only");
+else if (cfg.instagram && !fixture) await syncInstagramPublic(cfg.instagram.replace(/^@/, ""));
 await manualLinks(tt);
 
 const { sortPosts } = await import("../js/social-sort.js");
