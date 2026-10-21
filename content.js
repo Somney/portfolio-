@@ -148,9 +148,9 @@ export default {
     // size: [width, height] in inches — books show at their true size relative to each other
     { id: "book-01", title: "Sketchbook 01", year: 2026, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 19,
       size: [5.25, 8.25], note: "Sep – Oct 2026" },
-    // Started Nov 2023. Page photos will be taken recently, so their dates can't be used
-    // for ordering — order these pages by hand (page-01, page-02, … in book order).
-    { id: "book-02", title: "Sketchbook 02", year: 2023, color: "#ff8a00", folder: "assets/sketchbooks/book-02", pages: 0,
+    // Started Nov 2023. Page photos were taken recently, so their dates can't be used
+    // for ordering — pages are numbered by hand (page-01, page-02, … in the order sent).
+    { id: "book-02", title: "Sketchbook 02", year: 2023, color: "#ff8a00", folder: "assets/sketchbooks/book-02", pages: 19,
       size: [8.25, 10], note: "Started Nov 2023" },
   ],
 
