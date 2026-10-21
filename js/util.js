@@ -75,7 +75,7 @@ export function placeholderCanvas(kind, seed, label = "", color = "#ff3ea5", w =
       }
       g.stroke();
     }
-    g.fillStyle = "rgba(0,0,0,.35)"; g.font = `500 ${w * 0.03}px Space Grotesk, sans-serif`;
+    g.fillStyle = "rgba(0,0,0,.35)"; g.font = `500 ${w * 0.03}px "Oxanium", sans-serif`;
     g.fillText(label, w * 0.06, h * 0.95);
     return c;
   }
@@ -89,13 +89,13 @@ export function placeholderCanvas(kind, seed, label = "", color = "#ff3ea5", w =
     g.beginPath(); g.arc(w * 0.5, h * 0.62, w * 0.12, 0, 7); g.fill();
     g.fillStyle = ink;
     g.fillRect(0, h * 0.06, w, h * 0.004);
-    g.font = `${w * 0.085}px "Rubik Mono One", Impact, sans-serif`;
+    g.font = `${w * 0.085}px "Zen Dots", Impact, sans-serif`;
     g.textBaseline = "top";
     wrap(g, label.toUpperCase(), w * 0.07, h * 0.1, w * 0.86, w * 0.1);
     // sticker
     g.save(); g.translate(w * 0.78, h * 0.86); g.rotate(-0.3);
     g.fillStyle = "#fff"; g.beginPath(); g.arc(0, 0, w * 0.09, 0, 7); g.fill();
-    g.fillStyle = ink; g.font = `${w * 0.035}px "Rubik Mono One", sans-serif`;
+    g.fillStyle = ink; g.font = `${w * 0.035}px "Zen Dots", sans-serif`;
     g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("★", 0, 0);
     g.restore();
     return c;
@@ -115,7 +115,7 @@ export function placeholderCanvas(kind, seed, label = "", color = "#ff3ea5", w =
     g.fillStyle = i % 2 ? ink : "#ffffff";
   }
   g.fillStyle = "rgba(255,255,255,.9)";
-  g.font = `${w * 0.05}px "Rubik Mono One", sans-serif`;
+  g.font = `${w * 0.05}px "Zen Dots", sans-serif`;
   g.fillText(label.toUpperCase(), w * 0.06, h * 0.94);
   return c;
 }
