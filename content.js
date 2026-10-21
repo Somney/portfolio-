@@ -155,10 +155,12 @@ export default {
       // Sticky notes you can lift: page number → the photo with the notes lifted,
       // plus one outline per note ([x, y] corners, 0–1 across / down the page).
       // Tapping a note peels it up to show that spot of the "lift" photo.
+      // A tilted note: { points: [...], peel: 45 } — the direction it peels toward,
+      // in degrees clockwise from straight up (default 0 = peels bottom → top).
       layers: {
         23: { lift: "page-23-lift.jpg", notes: [
           [[0, 0], [0.335, 0], [0.335, 0.405], [0, 0.405]],                   // pink note
-          [[0.52, 0.165], [0.70, 0.015], [0.91, 0.19], [0.76, 0.41]],         // diamond note
+          { points: [[0.52, 0.165], [0.70, 0.015], [0.91, 0.19], [0.76, 0.41]], peel: 45 },   // tilted note
           [[0.62, 0.455], [0.97, 0.455], [0.97, 0.735], [0.62, 0.735]],       // green note
         ] },
       } },

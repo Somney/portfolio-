@@ -554,14 +554,19 @@ function makeLayer(base, lift, notes, leafIdx, side) {
   // each note's colour (for its curled underside), sampled from the base photo
   const sc = document.createElement("canvas"); sc.width = sc.height = 1;
   const sg = sc.getContext("2d", { willReadFrequently: true });
-  const N = notes.map((poly) => {
+  const N = notes.map((note) => {
+    const poly = Array.isArray(note) ? note : note.points;
+    const phi = ((Array.isArray(note) ? 0 : note.peel) || 0) * Math.PI / 180;   // peel direction, clockwise from up
     const pts = poly.map(([x, y]) => [x * c.width, y * c.height]);
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
     const box = { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
     const cx = xs.reduce((a, v) => a + v, 0) / xs.length, cy = ys.reduce((a, v) => a + v, 0) / ys.length;   // middle of the note
     sg.drawImage(base, cx - 4, cy + (box.y1 - cy) * 0.5, 8, 8, 0, 0, 1, 1);
     const [r, gg, bb] = sg.getImageData(0, 0, 1, 1).data;
-    return { poly, pts, box, col: `rgb(${Math.min(255, r + 18)},${Math.min(255, gg + 18)},${Math.min(255, bb + 18)})`, p: 0, target: 0, user: false };
+    // positions along the peel direction ("local y": the free edge is the largest)
+    const ly = pts.map(([x, y]) => -((x - cx) * Math.sin(phi) - (y - cy) * Math.cos(phi)));
+    const fr = { cx, cy, phi, y0: Math.min(...ly), y1: Math.max(...ly), r: Math.hypot(box.x1 - box.x0, box.y1 - box.y0) };
+    return { poly, pts, box, fr, col: `rgb(${Math.min(255, r + 18)},${Math.min(255, gg + 18)},${Math.min(255, bb + 18)})`, p: 0, target: 0, user: false };
   });
   const tex = prep(new THREE.CanvasTexture(c));
   const L = { c, g, base, lift, notes: N, tex, leafIdx, side, peeked: false };
@@ -575,25 +580,30 @@ function drawLayer(L) {
   for (const n of L.notes) {
     const e = easeInOut(n.p);
     if (e < 0.002) continue;
-    const { box, pts } = n, h = box.y1 - box.y0, w = box.x1 - box.x0;
-    // the note lifts from its bottom edge upward: below the fold you see what's underneath
-    const fold = box.y1 - e * h * 1.12;
+    const { pts, fr } = n, h = fr.y1 - fr.y0, R = fr.r;
+    // the note lifts from its free edge toward its sticky edge (along its own tilt):
+    // past the fold you see what's underneath. Drawn in the note's rotated frame.
+    const fold = fr.y1 - e * h * 1.12;
     const curl = Math.min(h * 0.16, c.height * 0.035) * Math.sin(Math.min(1, e) * Math.PI);
+    const frame = () => { g.translate(fr.cx, fr.cy); g.rotate(fr.phi); };
     g.save();
     path(pts); g.clip();
-    g.beginPath(); g.rect(0, fold, c.width, c.height); g.clip();
+    frame(); g.beginPath(); g.rect(-R, fold, 2 * R, R * 2); g.clip();
+    g.setTransform(1, 0, 0, 1, 0, 0);
     g.drawImage(lift, 0, 0, c.width, c.height);
+    frame();
     const sh = g.createLinearGradient(0, fold, 0, fold + curl * 2.2 + 4);    // soft shadow under the lifted edge
     sh.addColorStop(0, "rgba(0,0,0,.35)"); sh.addColorStop(1, "rgba(0,0,0,0)");
-    g.fillStyle = sh; g.fillRect(box.x0 - 4, fold, w + 8, curl * 2.2 + 4);
+    g.fillStyle = sh; g.fillRect(-R, fold, 2 * R, curl * 2.2 + 4);
     g.restore();
     if (curl > 0.5) {
-      // the curled-up underside of the note, just above the fold
+      // the curled-up underside of the note, just behind the fold
       g.save();
       path(pts); g.clip();
+      frame();
       const cg = g.createLinearGradient(0, fold - curl, 0, fold);
       cg.addColorStop(0, n.col); cg.addColorStop(0.7, n.col); cg.addColorStop(1, "rgba(0,0,0,.25)");
-      g.fillStyle = cg; g.fillRect(box.x0 - 4, fold - curl, w + 8, curl);
+      g.fillStyle = cg; g.fillRect(-R, fold - curl, 2 * R, curl);
       g.restore();
     }
   }
