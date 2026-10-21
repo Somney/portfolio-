@@ -2,7 +2,7 @@
 // Textures come from the folders listed in content.js; anything missing
 // gets an auto-drawn placeholder.
 import * as THREE from "three";
-import { $, clamp, lerp, seeded, placeholderCanvas, easeOut, reducedMotion } from "./util.js";
+import { $, clamp, lerp, seeded, placeholderCanvas, easeOut, easeInOut, reducedMotion } from "./util.js";
 import { splashTransition } from "./splash.js";
 import { pageFlip, isMuted, setMuted } from "./sound.js";
 
@@ -64,6 +64,7 @@ function shade(hex, f) {
    DESK — the scattered books you pick from
    ==================================================================== */
 let shelf = null;
+export const getShelf = () => shelf;
 
 // Real-world sizes: content.js → sketchbooks[].size = [width, height] in inches.
 // 1 scene unit = 5.25 in (Sketchbook 01's width). Without a size, a book is
@@ -74,6 +75,12 @@ function bookDims(b, aspect = 1.38) {
   if (Array.isArray(b.size) && b.size[0] > 0 && b.size[1] > 0) return { w: b.size[0] / UNIT_IN, h: b.size[1] / UNIT_IN, fixed: true };
   return { w: 1, h: aspect, fixed: false };
 }
+
+// Opening a book: the desk camera flies to its cover, then the viewer fades in with the
+// cover at the same spot and size. Both sides use these so the hand-off lines up.
+const COVER_TILT = 0.42;                                              // = the viewer's resting book tilt
+const COVER_DIR = new THREE.Vector3(0, Math.cos(COVER_TILT), Math.sin(COVER_TILT));
+const coverPx = (w, h) => Math.min(innerHeight * 0.6, innerWidth * 0.78 * (h / w));
 
 export function initShelf({ books, theme, canvas, label, onOpen }) {
   allBooks = books;
@@ -165,16 +172,25 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
     bounds = { w: cols * sx, d: rows * sz };
     fit();
   }
+  // Camera = a point on the desk it looks at + a direction + a distance.
+  // view.z / fx / fz is the pinch zoom; fx (zoomFx) flies into one book.
+  const TAN = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const baseDir = new THREE.Vector3(0, 0.86, 0.5).normalize();
+  const view = { z: 1, fx: 0, fz: 0 };
+  const cur = { look: new THREE.Vector3(0, 0, 0.35), dist: 10, dir: baseDir.clone() };
+  let baseDist = 10, zoomFx = null;
+  const baseView = () => ({ look: new THREE.Vector3(view.fx, 0, 0.35 + view.fz), dist: baseDist / view.z, dir: baseDir });
+  const applyCam = (v) => {
+    camera.position.copy(v.dir).multiplyScalar(v.dist).add(v.look);
+    camera.lookAt(v.look);
+  };
   function fit() {
     const rect = canvas.getBoundingClientRect();
     renderer.setSize(rect.width, rect.height, false);
     camera.aspect = rect.width / Math.max(1, rect.height);
-    const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    const dist = Math.max((bounds.w + 0.6) / (2 * tan * camera.aspect), (bounds.d * 1.1 + 1.0) / (2 * tan)) * 1.08;
-    const dir = new THREE.Vector3(0, 0.86, 0.5).normalize();
-    camera.position.copy(dir.multiplyScalar(dist));
-    camera.lookAt(0, 0, 0.35);
     camera.updateProjectionMatrix();
+    baseDist = Math.max((bounds.w + 0.6) / (2 * TAN * camera.aspect), (bounds.d * 1.1 + 1.0) / (2 * TAN)) * 1.08;
+    if (!zoomFx) { const b = baseView(); cur.look.copy(b.look); cur.dist = b.dist; cur.dir.copy(b.dir); applyCam(cur); }
   }
   new ResizeObserver(layout).observe(canvas);
   layout();
@@ -190,14 +206,85 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
     const hit = ray.intersectObjects(items.map((i) => i.mesh))[0];
     return hit ? hit.object.userData.item : null;
   };
-  canvas.addEventListener("pointermove", (e) => { hovered = pick(e); canvas.style.cursor = hovered ? "pointer" : "default"; });
-  canvas.addEventListener("pointerleave", () => { hovered = null; ndc.set(9, 9); });
-  canvas.addEventListener("pointerdown", (e) => { downAt = { x: e.clientX, y: e.clientY }; hovered = pick(e); });
-  canvas.addEventListener("pointerup", (e) => {
-    if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 8) return;
-    const it = pick(e);
-    if (it) { it.pickup = 1; setTimeout(() => onOpen(it.b.id), 280); }
+  // ---- pinch / ctrl-scroll zoom on the desk, one-finger pan while zoomed ----
+  const deskHit = (cx, cy) => {
+    const r = canvas.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), camera);
+    const t = -ray.ray.origin.y / ray.ray.direction.y;
+    return t > 0 ? ray.ray.origin.clone().addScaledVector(ray.ray.direction, t) : null;
+  };
+  const clampView = () => {
+    const free = 1 - 1 / view.z;
+    view.fx = clamp(view.fx, -(bounds.w / 2) * free, (bounds.w / 2) * free);
+    view.fz = clamp(view.fz, -(bounds.d / 2) * free - 0.2, (bounds.d / 2) * free + 0.2);
+    canvas.style.touchAction = view.z > 1.02 ? "none" : "pan-y";   // zoomed in: one finger pans the desk
+  };
+  // zoom to z, keeping the desk point under (cx, cy) where it is
+  const zoomAround = (P, z0, z, fx0, fz0) => {
+    view.z = clamp(z, 1, 4);
+    const s = z0 / view.z;
+    view.fx = P.x + (fx0 - P.x) * s; view.fz = (P.z - 0.35) + (fz0 - (P.z - 0.35)) * s;
+    if (view.z < 1.01) { view.z = 1; view.fx = view.fz = 0; }
+    clampView();
+  };
+  const wpp = () => (2 * (baseDist / view.z) * TAN) / Math.max(1, canvas.clientHeight);   // world units per screen px
+  const pts = new Map();
+  let pinch = null, pan = null, gestured = false;
+  canvas.addEventListener("touchstart", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  canvas.addEventListener("touchmove", (e) => { if (e.touches.length > 1 || view.z > 1.02) e.preventDefault(); }, { passive: false });
+  canvas.addEventListener("pointermove", (e) => {
+    if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && pts.size >= 2) {
+      const [a, b] = [...pts.values()];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      zoomAround(pinch.P, pinch.z0, pinch.z0 * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, pinch.d0), pinch.fx0, pinch.fz0);
+      view.fx -= (mx - pinch.mx) * wpp(); view.fz -= ((my - pinch.my) * wpp()) / baseDir.y; clampView();
+      return;
+    }
+    if (pan && pts.size === 1 && (pan.moved || Math.hypot(e.clientX - pan.x, e.clientY - pan.y) > 6)) {
+      pan.moved = gestured = true;
+      view.fx = pan.fx0 - (e.clientX - pan.x) * wpp(); view.fz = pan.fz0 - ((e.clientY - pan.y) * wpp()) / baseDir.y; clampView();
+      return;
+    }
+    if (e.pointerType !== "touch") { hovered = zoomFx ? null : pick(e); canvas.style.cursor = hovered ? "pointer" : view.z > 1.02 ? "grab" : "default"; }
   });
+  canvas.addEventListener("pointerleave", () => { hovered = null; ndc.set(9, 9); });
+  canvas.addEventListener("pointerdown", (e) => {
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const P = deskHit(mx, my);
+      if (P) { pinch = { P, d0: Math.hypot(a.x - b.x, a.y - b.y), z0: view.z, fx0: view.fx, fz0: view.fz, mx, my }; gestured = true; pan = null; hovered = null; }
+      return;
+    }
+    if (pts.size > 2) return;
+    gestured = false;
+    downAt = { x: e.clientX, y: e.clientY };
+    if (view.z > 1.02) { canvas.setPointerCapture?.(e.pointerId); pan = { x: e.clientX, y: e.clientY, fx0: view.fx, fz0: view.fz, moved: false }; }
+    if (!zoomFx) hovered = pick(e);
+  });
+  const up = (e) => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (pts.size) return;
+    pan = null;
+    const tap = !gestured && downAt && e.type === "pointerup" && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) <= 8;
+    downAt = null;
+    if (e.pointerType === "touch") hovered = null;
+    if (!tap || zoomFx) return;
+    const it = pick(e);
+    if (it) onOpen(it.b.id);
+  };
+  canvas.addEventListener("pointerup", up);
+  canvas.addEventListener("pointercancel", up);
+  // ctrl + scroll (and trackpad pinch, which arrives as ctrl + wheel); plain scrolling still scrolls the page
+  canvas.addEventListener("wheel", (e) => {
+    if (!e.ctrlKey || zoomFx) return;
+    e.preventDefault();
+    const P = deskHit(e.clientX, e.clientY);
+    if (P) zoomAround(P, view.z, view.z * Math.exp(-e.deltaY * 0.01), view.fx, view.fz);
+  }, { passive: false });
 
   // label that follows the hovered book
   const lab = label, labT = $("strong", lab), labS = $("span", lab);
@@ -205,7 +292,7 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
 
   let visible = false, paused = false, t0 = performance.now(), last = t0, started = false;
   const clock = () => (performance.now() - t0) / 1000;
-  new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible) { if (!started) { started = true; t0 = performance.now(); } loop(); } }, { threshold: 0.05 }).observe(canvas);
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (!visible && !zoomFx && view.z > 1) { view.z = 1; view.fx = view.fz = 0; clampView(); } if (visible) { if (!started) { started = true; t0 = performance.now(); } loop(); } }, { threshold: 0.05 }).observe(canvas);
 
   const targetMat = new THREE.Color();
   let rafId = 0;
@@ -218,23 +305,44 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     const t = clock();
     const k = 1 - Math.exp(-dt * 10);
-    group.rotation.y = lerp(group.rotation.y, mouse.x * 0.06, k * 0.3);
-    group.rotation.x = lerp(group.rotation.x, -mouse.y * 0.03, k * 0.3);
+    // flying into / out of a book: fe = 0 (desk view) … 1 (cover fills the screen)
+    let fe = 0;
+    if (zoomFx) {
+      const p = clamp((now - zoomFx.t0) / zoomFx.dur, 0, 1);
+      if (p >= 0.8 && zoomFx.onNear) { zoomFx.onNear(); zoomFx.onNear = null; }
+      fe = zoomFx.inward ? easeInOut(p) : 1 - easeInOut(p);
+      if (p >= 1) { zoomFx.done?.(); zoomFx.done = null; if (!zoomFx.inward) zoomFx = null; }
+    }
+    const tilt = zoomFx ? 0 : 1;
+    group.rotation.y = lerp(group.rotation.y, mouse.x * 0.06 * tilt * (view.z < 1.02), k * (zoomFx ? 1 : 0.3));
+    group.rotation.x = lerp(group.rotation.x, -mouse.y * 0.03 * tilt * (view.z < 1.02), k * (zoomFx ? 1 : 0.3));
     for (const it of items) {
-      const hov = it === hovered;
+      const hov = it === hovered && !zoomFx;
       it.hoverT = lerp(it.hoverT, hov ? 1 : 0, k);
-      if (it.pickup) it.pickup = Math.min(it.pickup + dt * 4, 2);
+      const f = zoomFx && zoomFx.it === it ? fe : 0;        // the book being opened settles flat
       const dropP = clamp((t - it.dropDelay) / 0.7, 0, 1);
       const drop = it.drop ? (1 - easeOut(dropP)) * 4 + Math.sin(dropP * Math.PI) * 0.15 : 0;
-      const bob = reducedMotion ? 0 : Math.sin(t * 1.4 + it.phase) * 0.02;
-      const pick = it.pickup ? (it.pickup - 1) : 0;
-      it.holder.position.set(it.x, drop + bob + it.hoverT * 0.45 + pick * 1.5, it.z + it.hoverT * 0.15);
-      it.holder.rotation.set(-it.hoverT * 0.32 - pick * 0.4, it.rotJ * (1 - it.hoverT * 0.8), it.hoverT * 0.04);
+      const bob = reducedMotion ? 0 : Math.sin(t * 1.4 + it.phase) * 0.02 * (1 - f);
+      it.holder.position.set(it.x, drop + bob + it.hoverT * 0.45, it.z + it.hoverT * 0.15);
+      it.holder.rotation.set(-it.hoverT * 0.32, it.rotJ * (1 - it.hoverT * 0.8) * (1 - f), it.hoverT * 0.04);
       it.holder.scale.setScalar(1 + it.hoverT * 0.06);
     }
-    targetMat.set(hovered ? hovered.b.color : theme.palette[2] || "#00e0ff");
-    if (hovered && hovered.b.color.toLowerCase() === "#f6f3ec") targetMat.set(theme.palette[2]);
-    mat.material.color.lerp(targetMat, k * 0.4);
+
+    // camera: desk view (with pinch zoom), blended toward the opened book's cover
+    const bv = baseView();
+    const kk = pinch || pan ? 1 - Math.exp(-dt * 30) : k * 0.8;
+    cur.look.lerp(bv.look, kk); cur.dist = lerp(cur.dist, bv.dist, kk); cur.dir.copy(bv.dir);
+    if (zoomFx) {
+      const cv = coverView(zoomFx.it), s = zoomFx.inward ? zoomFx.from : cur;
+      const v = { look: s.look.clone().lerp(cv.look, fe), dist: Math.exp(lerp(Math.log(s.dist), Math.log(cv.dist), fe)), dir: s.dir.clone().lerp(cv.dir, fe).normalize() };
+      applyCam(v);
+    } else applyCam(cur);
+
+    // the desk takes on the colour of the hovered book, or fades fully to it while opening
+    const focusB = zoomFx ? zoomFx.it.b : hovered?.b;
+    targetMat.set(focusB ? focusB.color : theme.palette[2] || "#00e0ff");
+    if (focusB && focusB.color.toLowerCase() === "#f6f3ec") targetMat.set(theme.palette[2]);
+    mat.material.color.lerp(targetMat, zoomFx ? 1 - Math.exp(-dt * 7) : k * 0.4);
 
     if (hovered) {
       hovered.holder.getWorldPosition(v3); v3.y += 0.4; v3.z -= hovered.h / 2; v3.project(camera);
@@ -248,8 +356,47 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
     loop();
   }
 
+  // where the camera sits so a book's cover fills the screen the way the viewer first shows it
+  function coverView(it) {
+    const r = canvas.getBoundingClientRect();
+    const look = group.localToWorld(new THREE.Vector3(it.x, it.thick, it.z));
+    const dir = COVER_DIR.clone();
+    const px = coverPx(it.w, it.h);                                      // cover height on screen, px
+    const dist = (it.h * r.height) / (2 * TAN * px);
+    // the viewer is full-screen; shift so the cover lands at the window's centre, not the canvas's
+    const off = innerHeight / 2 - (r.top + r.height / 2);
+    const up = new THREE.Vector3(0, dir.z, -dir.y);
+    look.addScaledVector(up, off * (2 * dist * TAN) / Math.max(1, r.height));
+    return { look, dist, dir };
+  }
+
   shelf = {
-    pause(v) { paused = v; if (!v) { last = performance.now(); items.forEach((i) => (i.pickup = 0)); loop(); } },
+    pause(v) { paused = v; if (!v) { last = performance.now(); loop(); } },
+    // can we fly into a book? (the desk has to be on screen)
+    canZoom() {
+      const r = canvas.getBoundingClientRect();
+      return visible && !paused && r.bottom > innerHeight * 0.3 && r.top < innerHeight * 0.7;
+    },
+    // fly into a book; resolves `near` a little before the cover fills the screen, `done` at the end
+    zoomTo(id) {
+      const it = items.find((i) => i.b.id === id);
+      hovered = null; pinch = pan = null;
+      const from = { look: camera.position.clone().sub(cur.dir.clone().multiplyScalar(cur.dist)), dist: cur.dist, dir: cur.dir.clone() };
+      let near, done;
+      const pn = new Promise((r) => (near = r)), pd = new Promise((r) => (done = r));
+      zoomFx = { it, inward: true, t0: performance.now(), dur: reducedMotion ? 150 : 750, from, onNear: near, done };
+      loop();
+      return { near: pn, done: pd };
+    },
+    // back out of the book to the desk (called as the viewer fades away)
+    zoomOut(id) {
+      const it = items.find((i) => i.b.id === id);
+      if (!it) return;
+      view.z = 1; view.fx = view.fz = 0; clampView();
+      const b = baseView(); cur.look.copy(b.look); cur.dist = b.dist;
+      zoomFx = { it, inward: false, t0: performance.now(), dur: reducedMotion ? 150 : 700 };
+      paused = false; last = performance.now(); loop();
+    },
   };
   return shelf;
 }
@@ -627,7 +774,7 @@ function viewerFrame(now) {
   const rx = (cs * V.W + sn * V.H / 2) * 1.05 * free, ry = (sn * V.W + cs * V.H / 2) * 1.05 * free;
   V.fx = clamp(V.fx, -rx, rx); V.fy = clamp(V.fy, -0.04 - ry, -0.04 + ry);
   const tx = V.fx, ty = V.fy;
-  const kk = V.gesture ? 1 - Math.exp(-dt * 30) : k;            // follow fingers tightly, ease otherwise
+  const kk = V.holdCam ? 0 : V.gesture ? 1 - Math.exp(-dt * 30) : k;   // follow fingers tightly, ease otherwise
   V.cam.d = lerp(V.cam.d, tz, kk); V.cam.x = lerp(V.cam.x, tx, kk); V.cam.y = lerp(V.cam.y, ty, kk);
   V.camera.position.set(V.cam.x, V.cam.y, V.cam.d);
   V.camera.lookAt(V.cam.x, V.cam.y, 0);
@@ -641,11 +788,14 @@ function viewerFrame(now) {
   V.raf = requestAnimationFrame(viewerFrame);
 }
 
-export async function openViewer(b, startLeaf = 0) {
+// fadeAfter: a promise (the desk's zoom into this book) — the viewer builds hidden, then
+// fades in over it instead of using the splash.
+export async function openViewer(b, startLeaf = 0, { fadeAfter = null } = {}) {
   if (!V) createViewer();
   if (V.open) disposeBook();
-  shelf?.pause(true);
+  if (!fadeAfter) shelf?.pause(true);
   V.bookData = b;
+  V.root.classList.toggle("is-faded", !!fadeAfter);
   V.root.hidden = false;
   V.root.style.setProperty("--book", b.color);
   $(".viewer__title strong", V.root).textContent = b.title;
@@ -657,18 +807,45 @@ export async function openViewer(b, startLeaf = 0) {
   fitViewer();
   V.cam = { x: 0, y: 0, d: V.fitD };
   V.offsetX = -V.W / 2;
-  V.open = true; V.last = V.introStart = performance.now();
-  document.body.classList.add("no-scroll");
   // jump to a page from the URL, otherwise open the cover after a beat
   const target = clamp(+startLeaf || 0, 0, leaves.length);
+  if (fadeAfter && !target) {
+    // start with the closed cover exactly where the desk zoom leaves it, then ease back to the spread
+    V.intro = 1;
+    V.cam.d = (V.H * 1.02 * innerHeight) / (2 * V.tan * coverPx(V.W, V.H));
+  }
   for (let i = 0; i < target; i++) { leaves[i].p = leaves[i].target = 1; leaves[i].dirty = true; }
+  V.open = true; V.last = V.introStart = performance.now();
   updateCount();
-  if (!target) setTimeout(() => V.open && turnedCount() === 0 && flip(1), 750);
   V.raf = requestAnimationFrame(viewerFrame);
+  if (fadeAfter) {
+    V.holdCam = true;                      // keep the camera on the cover until it's visible
+    await fadeAfter;
+    if (!V.open || V.bookData !== b) return;
+    V.root.classList.remove("is-faded");
+    V.last = V.introStart = performance.now();
+    shelf?.pause(true);
+    setTimeout(() => { V.holdCam = false; }, 200);
+  }
+  document.body.classList.add("no-scroll");
+  if (!target) setTimeout(() => V.open && turnedCount() === 0 && flip(1), fadeAfter ? 650 : 750);
 }
 
 export async function closeViewer() {
   if (!V?.open) return;
+  const id = V.bookData.id;
+  if (shelf) {
+    // fade the viewer away while the desk camera backs out of the book
+    shelf.zoomOut(id);
+    V.root.classList.add("is-faded");
+    document.body.classList.remove("no-scroll");
+    history.replaceState(null, "", "#sketchbooks");
+    await new Promise((r) => setTimeout(r, 380));
+    if (!V.root.classList.contains("is-faded")) return;   // reopened meanwhile
+    V.open = false; cancelAnimationFrame(V.raf); V.raf = 0;
+    disposeBook(); V.root.hidden = true; V.root.classList.remove("is-faded");
+    return;
+  }
   await splashTransition({
     color: "#0d0d0d", ink: V.bookData.color,
     onCovered: () => {

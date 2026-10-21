@@ -352,6 +352,13 @@ async function openBook(id, page = 0) {
   if (!book) return;
   const mod = await loadShelf();
   if (!mod) return;
+  const shelf = mod.getShelf?.();
+  if (shelf?.canZoom() && !+page) {
+    // fly the desk camera into the book, and fade the page-turner in over it
+    const fx = shelf.zoomTo(id);
+    mod.openViewer(book, 0, { fadeAfter: fx.near });
+    return;
+  }
   await splashTransition({ color: book.color, ink: INK, onCovered: () => mod.openViewer(book, page) });
 }
 
