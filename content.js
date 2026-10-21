@@ -163,7 +163,7 @@ export default {
      Want different file names? Use `pageList: ["a.jpg", "b.png", ...]`
      instead of `pages`.                                                    */
   sketchbooks: [
-    { id: "book-01", title: "Sketchbook 01", year: 2025, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 12, note: "Daily studies" },
+    { id: "book-01", title: "Sketchbook 01", year: 2026, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 19, note: "Sep – Oct 2026" },
     { id: "book-02", title: "Sketchbook 02", year: 2025, color: "#c6ff00", folder: "assets/sketchbooks/book-02", pages: 10, note: "Travel" },
     { id: "book-03", title: "Sketchbook 03", year: 2024, color: "#00e0ff", folder: "assets/sketchbooks/book-03", pages: 14, note: "Figure drawing" },
     { id: "book-04", title: "Sketchbook 04", year: 2024, color: "#ff8a00", folder: "assets/sketchbooks/book-04", pages: 8,  note: "Colour tests" },
