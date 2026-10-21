@@ -12,17 +12,18 @@ import { attachMedia, resumeAudio } from "./sound.js";
 const ytId = (s = "") => (s.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/) || [])[1] || (/^[\w-]{11}$/.test(s) ? s : null);
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 
-async function fileBackend(cfg, ui) {
-  // iPhones don't preload audio before a tap, so just confirm the file exists
-  const r = await fetch(cfg.file, { method: "HEAD" });
-  if (!r.ok) throw new Error("file missing");
-  const a = new Audio(cfg.file);
+// The <audio> element is created right away (not after a network check) so it
+// is ready to start inside the visitor's very first tap.
+function fileBackend(cfg, ui, onFail) {
+  const a = new Audio();
   a.loop = true; a.preload = "auto"; a.volume = Math.min(1, (cfg.volume ?? 35) / 100);
+  a.addEventListener("error", onFail, { once: true });   // missing file → fall back to YouTube
+  a.src = cfg.file;
   attachMedia(a);                                   // lets the signal bars read the real levels
   a.addEventListener("play", () => ui.state(true));
   a.addEventListener("pause", () => ui.state(false));
   return {
-    play: () => { resumeAudio(); a.play().catch(() => {}); }, pause: () => a.pause(),
+    play: () => { resumeAudio(); return a.play(); }, pause: () => a.pause(),
     title: cfg.title || decodeURIComponent(cfg.file.split("/").pop().replace(/\.\w+$/, "").replace(/[-_]+/g, " ")),
   };
 }
@@ -68,32 +69,38 @@ export function initMusic(cfg) {
   const pill = box.querySelector(".np__pill"), titleEl = box.querySelector(".np__title"), btn = box.querySelector(".np__btn");
 
   let backend = null, playing = false, held = false, started = false;
-  let wantOn = store.get("music") !== "off";
-  const ui = { state(on) { playing = on; box.classList.toggle("is-playing", on); btn.textContent = on ? "❚❚" : "▶"; } };
-  const play = () => { if (backend && !held) backend.play(); };
+  // a pause only lasts for this visit — every new visit starts with music
+  const sess = { get: (k) => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch {} } };
+  let wantOn = sess.get("music") !== "off";
+  const ui = { state(on) { playing = on; box.classList.toggle("is-playing", on); btn.textContent = on ? "❚❚" : "▶"; if (on) started = true; } };
+  const play = () => { if (!backend || held) return; try { const r = backend.play(); r?.catch?.(() => {}); } catch {} };
   const pause = () => backend?.pause();
+  const setTitle = () => { if (backend?.title) titleEl.textContent = backend.title; };
 
-  (async () => {
-    if (cfg.file) { try { backend = await fileBackend(cfg, ui); } catch { backend = null; } }
-    if (!backend && id) { try { backend = await youtubeBackend(cfg, id, ui); } catch { backend = null; } }
-    if (!backend) { box.remove(); return; }
-    if (backend.title) titleEl.textContent = backend.title;
-    if (started && wantOn) play();
-  })();
-
-  // first interaction anywhere starts the music
-  const kick = (e) => {
-    if (started) return;
-    started = true;
-    if (e && pill.contains(e.target)) return;   // the pill's own click handles it
-    if (wantOn) play();
+  const useYouTube = async () => {
+    if (!id) { box.remove(); return; }
+    try { backend = await youtubeBackend(cfg, id, ui); setTitle(); if (wantOn && started) play(); }
+    catch { box.remove(); }
   };
-  for (const ev of ["pointerdown", "keydown", "touchstart"]) addEventListener(ev, kick, { once: true, passive: true, capture: true });
+  if (cfg.file) { backend = fileBackend(cfg, ui, () => { backend = null; useYouTube(); }); setTitle(); }
+  else useYouTube();
+
+  // Start on the first real interaction anywhere: a tap, click, opening the
+  // iPod menu, a key. Browsers only allow sound on the *end* of a tap
+  // (touchend / pointerup / click), so we listen for those and keep trying
+  // on each interaction until playback has actually begun.
+  const kick = (e) => {
+    if (playing || !wantOn || held) return;
+    if (e && pill.contains(e.target)) return;   // the pill's own click handles it
+    started = true;
+    play();
+  };
+  for (const ev of ["pointerup", "touchend", "click", "keydown"]) addEventListener(ev, kick, { passive: true, capture: true });
 
   pill.addEventListener("click", () => {
     started = true;
     if (playing) { wantOn = false; pause(); } else { wantOn = true; play(); }
-    store.set("music", wantOn ? "on" : "off");
+    sess.set("music", wantOn ? "on" : "off");
   });
 
   return {
