@@ -145,7 +145,7 @@ export default {
      instead of `pages`.                                                    */
   sketchbooks: [
     { id: "book-01", title: "Sketchbook 01", year: 2026, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 19,
-      cover: "page-18.jpg", note: "Sep – Oct 2026" },
+      note: "Sep – Oct 2026" },     // cover.jpg + back.jpg in the folder
   ],
 
   /* ---------- Extras ----------
