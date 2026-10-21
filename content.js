@@ -12,9 +12,10 @@ export default {
   /* ---------- About you ---------- */
   artist: {
     name: "Fury Blade Seif",               // big name in the hero + browser tab
-    tagline: "paintings · sketchbooks · extras",
-    bio: "Painter & sketchbook hoarder. Swap this line for a short intro about you and your work.",
-    email: "hello@example.com",
+    tagline: "acrylic marker paintings · sketchbooks · timelapses",
+    slogan: "live life, live forever",
+    bio: "Fury Blade Seif paints in acrylic marker, mostly in sketchbooks, often live on stream, one page at a time.",
+    email: "sonofsomney@gmail.com",
     socials: [
       { label: "Instagram", url: "https://www.instagram.com/furballtbb/" },
       { label: "TikTok",    url: "https://www.tiktok.com/@lifeofseif" },
@@ -64,7 +65,7 @@ export default {
               the song; a website can't turn those off.
      volume: 0–100.  title / cover: optional (cover = image path).        */
   music: {
-    file: "assets/music/song.mp3",
+    file: "",                       // e.g. "assets/music/song.mp3" once uploaded
     youtube: "https://youtu.be/fFMYua37UGQ",
     volume: 35,
     title: "",
@@ -108,47 +109,27 @@ export default {
      Each entry is a "series". Every series gets its own colour, and
      switching between series plays a paint-splash transition.
      items: one per painting. Only `image` and `title` are required.      */
+  // "Fresh from the feed" (your latest TikTok pieces) is added automatically
+  // as the first series — see social.sort → inPaintings.
   paintings: [
     {
-      id: "series-one",
-      title: "Series One",
-      blurb: "A short line about this body of work.",
-      color: "#c6ff00",      // background colour for this series
+      id: "sketchbook-01",
+      title: "Sketchbook 01 — selects",
+      blurb: "Favourite pages from the September–October sketchbook.",
+      color: "#00e0ff",      // background colour for this series
       ink: "#0d0d0d",        // text/silhouette colour on top of it
       items: [
         // link (optional): the TikTok/Instagram post this piece appears in
-        { title: "Untitled I",   year: 2025, medium: "Oil on canvas",     size: "60 × 80 cm", image: "assets/paintings/series-one-01.jpg", link: "" },
-        { title: "Untitled II",  year: 2025, medium: "Oil on canvas",     size: "50 × 50 cm", image: "assets/paintings/series-one-02.jpg" },
-        { title: "Untitled III", year: 2024, medium: "Acrylic on panel",  size: "40 × 60 cm", image: "assets/paintings/series-one-03.jpg" },
-        { title: "Untitled IV",  year: 2024, medium: "Oil on linen",      size: "90 × 120 cm", image: "assets/paintings/series-one-04.jpg" },
-        { title: "Untitled V",   year: 2024, medium: "Gouache",           size: "A3",          image: "assets/paintings/series-one-05.jpg" },
-      ],
-    },
-    {
-      id: "series-two",
-      title: "Series Two",
-      blurb: "Another series, another colour.",
-      color: "#ff3ea5",
-      ink: "#0d0d0d",
-      items: [
-        { title: "Study in Pink", year: 2024, medium: "Oil on canvas", size: "30 × 40 cm", image: "assets/paintings/series-two-01.jpg" },
-        { title: "Night Swim",    year: 2024, medium: "Oil on canvas", size: "70 × 70 cm", image: "assets/paintings/series-two-02.jpg" },
-        { title: "Static",        year: 2023, medium: "Acrylic",       size: "50 × 70 cm", image: "assets/paintings/series-two-03.jpg" },
-        { title: "Afterglow",     year: 2023, medium: "Oil on panel",  size: "20 × 25 cm", image: "assets/paintings/series-two-04.jpg" },
-      ],
-    },
-    {
-      id: "series-three",
-      title: "Series Three",
-      blurb: "Commissions, studies, whatever you like.",
-      color: "#00e0ff",
-      ink: "#0d0d0d",
-      items: [
-        { title: "Blue Hour",  year: 2023, medium: "Watercolour", size: "A4", image: "assets/paintings/series-three-01.jpg" },
-        { title: "Coolant",    year: 2023, medium: "Oil",         size: "40 × 40 cm", image: "assets/paintings/series-three-02.jpg" },
-        { title: "Signal",     year: 2022, medium: "Mixed media", size: "60 × 90 cm", image: "assets/paintings/series-three-03.jpg" },
-        { title: "Low Tide",   year: 2022, medium: "Oil",         size: "30 × 30 cm", image: "assets/paintings/series-three-04.jpg" },
-        { title: "Receiver",   year: 2022, medium: "Acrylic",     size: "50 × 60 cm", image: "assets/paintings/series-three-05.jpg" },
+        { title: "Freighter at Dusk", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-05.jpg" },
+        { title: "Moonrise over the Water", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-06.jpg" },
+        { title: "House on the Hill", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-19.jpg" },
+        { title: "Through the Window", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-07.jpg" },
+        { title: "Flex", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-08.jpg" },
+        { title: "Spring Canopy", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-10.jpg" },
+        { title: "Studio Portrait", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-13.jpg" },
+        { title: "Waistband", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-11.jpg" },
+        { title: "Rooftop Figure", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-02.jpg" },
+        { title: "Swirl Head", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-16.jpg" },
       ],
     },
   ],
@@ -163,12 +144,8 @@ export default {
      Want different file names? Use `pageList: ["a.jpg", "b.png", ...]`
      instead of `pages`.                                                    */
   sketchbooks: [
-    { id: "book-01", title: "Sketchbook 01", year: 2026, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 19, note: "Sep – Oct 2026" },
-    { id: "book-02", title: "Sketchbook 02", year: 2025, color: "#c6ff00", folder: "assets/sketchbooks/book-02", pages: 10, note: "Travel" },
-    { id: "book-03", title: "Sketchbook 03", year: 2024, color: "#00e0ff", folder: "assets/sketchbooks/book-03", pages: 14, note: "Figure drawing" },
-    { id: "book-04", title: "Sketchbook 04", year: 2024, color: "#ff8a00", folder: "assets/sketchbooks/book-04", pages: 8,  note: "Colour tests" },
-    { id: "book-05", title: "Sketchbook 05", year: 2023, color: "#a77bff", folder: "assets/sketchbooks/book-05", pages: 12, note: "Ideas & notes" },
-    { id: "book-06", title: "Sketchbook 06", year: 2023, color: "#f6f3ec", folder: "assets/sketchbooks/book-06", pages: 10, note: "Ink only" },
+    { id: "book-01", title: "Sketchbook 01", year: 2026, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 19,
+      cover: "page-18.jpg", note: "Sep – Oct 2026" },
   ],
 
   /* ---------- Extras ----------
@@ -181,12 +158,10 @@ export default {
        link  → opens in a new tab          (url)
        text  → just a note card            (text)                           */
   extras: [
-    { type: "image", title: "Sticker sheet",   image: "assets/extras/stickers.jpg", caption: "Die-cut stickers, 2025" },
-    { type: "feed",  title: "Process timelapse", from: "timelapse" },   // random timelapse TikTok on every visit
-    { type: "link",  title: "Shop / prints",   url: "https://example.com", caption: "Prints & originals" },
-    { type: "text",  title: "Now",             text: "Currently working on a new series. Commissions open from spring." },
-    { type: "image", title: "Zine",            image: "assets/extras/zine.jpg", caption: "Risograph zine, 24pp" },
-    { type: "link",  title: "Say hi",          url: "mailto:hello@example.com", caption: "Email me" },
+    { type: "feed",  title: "Process timelapse", from: "timelapse" },    // random timelapse TikTok on every visit
+    { type: "text",  title: "Now",               text: "Filling a page a day in the current sketchbook, with drawing streams most nights." },
+    { type: "feed",  title: "From the sketchbook", from: "sketchbook" }, // random sketchbook post on every visit
+    { type: "link",  title: "Email",             url: "mailto:sonofsomney@gmail.com", caption: "sonofsomney@gmail.com" },
     // Paste TikTok / Instagram post links here to embed them as cards:
     // { type: "tiktok",    title: "Process video", url: "https://www.tiktok.com/@lifeofseif/video/1234567890123456789" },
     // { type: "instagram", title: "New piece",     url: "https://www.instagram.com/p/XXXXXXXXXXX/" },

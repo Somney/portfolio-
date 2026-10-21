@@ -41,14 +41,15 @@ const root = document.documentElement.style;
 root.setProperty("--ink", INK);
 root.setProperty("--paper", PAPER);
 PAL.forEach((c, i) => root.setProperty(`--c${i}`, c));
-document.title = `${artist.name} — Portfolio`;
+document.title = artist.name;
 $(".logo").textContent = artist.name;
 $(".hero__name").textContent = artist.name;
 $(".hero__tagline").textContent = artist.tagline;
 $(".contact__bio").textContent = artist.bio;
 $(".contact__email").textContent = artist.email;
 $(".contact__email").href = `mailto:${artist.email}`;
-$(".contact__name").textContent = artist.name;
+$(".contact__name").textContent = artist.slogan ? `${artist.name} — ${artist.slogan}` : artist.name;
+$(".contact__slogan").textContent = artist.slogan || "";
 $(".year").textContent = new Date().getFullYear();
 for (const s of artist.socials || []) {
   const a = el("a", "chip", esc(s.label)); a.href = s.url; a.target = "_blank"; a.rel = "noopener";
@@ -95,7 +96,7 @@ $(".hero").addEventListener("click", (e) => {
 });
 
 /* ---------- Marquee ---------- */
-const mq = ["PAINTINGS", "✦", "SKETCHBOOKS", "✦", "EXTRAS", "✦", artist.name.toUpperCase(), "★"].join("  ");
+const mq = ["PAINTINGS", "✦", "SKETCHBOOKS", "✦", "EXTRAS", "✦", artist.name.toUpperCase(), "★", ...(artist.slogan ? [artist.slogan.toUpperCase(), "★"] : [])].join("  ");
 $(".marquee__track").textContent = `${mq}  ${mq}  ${mq}  ${mq}  `;
 
 /* ---------- Lightbox ---------- */
