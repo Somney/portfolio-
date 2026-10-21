@@ -65,7 +65,18 @@ function shade(hex, f) {
    ==================================================================== */
 let shelf = null;
 
+// Real-world sizes: content.js → sketchbooks[].size = [width, height] in inches.
+// 1 scene unit = 5.25 in (Sketchbook 01's width). Without a size, a book is
+// 1 unit wide and its height follows the cover photo's shape.
+const UNIT_IN = 5.25;
+let allBooks = [];
+function bookDims(b, aspect = 1.38) {
+  if (Array.isArray(b.size) && b.size[0] > 0 && b.size[1] > 0) return { w: b.size[0] / UNIT_IN, h: b.size[1] / UNIT_IN, fixed: true };
+  return { w: 1, h: aspect, fixed: false };
+}
+
 export function initShelf({ books, theme, canvas, label, onOpen }) {
+  allBooks = books;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(1.5, devicePixelRatio));
   renderer.shadowMap.enabled = true;
@@ -117,14 +128,15 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
     const mesh = new THREE.Mesh(unit, [edge, spine, coverMat, backMat, edge, edge]);
     mesh.castShadow = true; mesh.receiveShadow = true;
     const holder = new THREE.Group(); holder.add(mesh); group.add(holder);
-    const it = { b, mesh, holder, thick, w: 1, h: 1.38, rotJ: (r() - 0.5) * 0.6, jx: (r() - 0.5) * 0.35, jz: (r() - 0.5) * 0.35,
+    const d0 = bookDims(b);
+    const it = { b, mesh, holder, thick, w: d0.w, h: d0.h, fixedSize: d0.fixed, rotJ: (r() - 0.5) * 0.6, jx: (r() - 0.5) * 0.35, jz: (r() - 0.5) * 0.35,
       phase: r() * 6, lift: 0, hoverT: 0, drop: reducedMotion ? 0 : 1, dropDelay: i * 0.09 };
     mesh.scale.set(it.w, thick, it.h);
     mesh.position.y = thick / 2;
     const p = bookPaths(b);
     loadTex(p.cover, () => placeholderCanvas("cover", b.id, b.title, b.color, 512, 704)).then((t) => {
       coverMat.map = t; coverMat.needsUpdate = true;
-      const img = t.image; if (img?.width) { it.h = clamp(img.height / img.width, 0.6, 1.8); mesh.scale.z = it.h; layout(); }
+      const img = t.image; if (img?.width && !it.fixedSize) { it.h = clamp(img.height / img.width, 0.6, 1.8); mesh.scale.z = it.h; layout(); }
     });
     loadTex(p.back, () => placeholderCanvas("cover", b.id + "back", "", b.color, 256, 352)).then((t) => {
       if (!t.userData.placeholder) { backMat.map = t; backMat.color.set(0xffffff); backMat.needsUpdate = true; }
@@ -141,7 +153,9 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
     const n = items.length;
     const cols = clamp(Math.round(Math.sqrt(n * aspect * 1.25)), 1, n);
     const rows = Math.ceil(n / cols);
-    const sx = 1.75, sz = 2.05;
+    // spacing follows the biggest book so different sizes never overlap
+    const mw = Math.max(...items.map((i) => i.w)), mh = Math.max(...items.map((i) => i.h));
+    const sx = mw + 0.75, sz = mh + 0.65;
     items.forEach((it, i) => {
       const c = i % cols, rI = Math.floor(i / cols);
       const inRow = rI === rows - 1 ? n - rI * cols : cols;  // centre the last row
@@ -260,7 +274,7 @@ function createViewer() {
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.position.set(-1.2, 1.8, 4); sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.5, far: 12 });
+  Object.assign(sun.shadow.camera, { left: -4.5, right: 4.5, top: 4.5, bottom: -4.5, near: 0.5, far: 14 });
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.01; sun.shadow.radius = 5;
   scene.add(sun);
 
@@ -327,8 +341,13 @@ async function buildBook(b) {
   const cover = await loadTex(paths.cover, () => placeholderCanvas("cover", b.id, b.title, b.color, 768, 1056));
   const img = cover.image;
   const aspect = img?.width ? clamp(img.height / img.width, 0.6, 1.8) : 1.38;
-  const W = 1, H = aspect;
+  const dm = bookDims(b, aspect), W = dm.w, H = dm.h;
   V.W = W; V.H = H;
+  // the viewer frames every book against the biggest one, so sizes read true
+  // (blended 60% toward the biggest so small books aren't tiny on a phone)
+  const big = allBooks.length ? allBooks.map((x) => bookDims(x, x === b ? aspect : 1.38)) : [dm];
+  V.refW = W + (Math.max(...big.map((d) => d.w)) - W) * 0.6;
+  V.refH = H + (Math.max(...big.map((d) => d.h)) - H) * 0.6;
 
   const pageTex = (k) => loadTex(paths.pages[k], () => placeholderCanvas("page", b.id + k, `p. ${k + 1}`, b.color, 640, Math.round(640 * aspect)));
   const paperCanvas = () => { const c = document.createElement("canvas"); c.width = 64; c.height = 88; const g = c.getContext("2d"); g.fillStyle = "#f3efe4"; g.fillRect(0, 0, 64, 88); return c; };
@@ -379,7 +398,7 @@ function fitViewer() {
 // camera distance that fits the open spread, for any rotation of the book
 function fitDistance(spin) {
   const portrait = V.camera.aspect < 0.9;
-  const sw = V.W * 2 * (portrait ? 1.1 : 1.32), sh = V.H * 1.55 * (0.8 + 0.2 * Math.cos(V.tilt));
+  const sw = (V.refW || V.W) * 2 * (portrait ? 1.1 : 1.32), sh = (V.refH || V.H) * 1.55 * (0.8 + 0.2 * Math.cos(V.tilt));
   const c = Math.abs(Math.cos(spin)), n = Math.abs(Math.sin(spin));
   const w = c * sw + n * sh, h = n * sw + c * sh;
   return Math.max(w / (2 * V.tan * V.camera.aspect), h / (2 * V.tan));

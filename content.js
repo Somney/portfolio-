@@ -140,12 +140,16 @@ export default {
        back.jpg           back cover    (optional)
        page-01.jpg        first inside page
        page-02.jpg        ...
-     then set `pages` to how many page images there are.
+     then set `pages` to how many page images there are, and
+     `size: [width, height]` in inches (measure the cover).
      Want different file names? Use `pageList: ["a.jpg", "b.png", ...]`
      instead of `pages`.                                                    */
   sketchbooks: [
+    // size: [width, height] in inches — books show at their true size relative to each other
     { id: "book-01", title: "Sketchbook 01", year: 2026, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 19,
-      note: "Sep – Oct 2026" },     // cover.jpg + back.jpg in the folder
+      size: [5.25, 8.25], note: "Sep – Oct 2026" },
+    { id: "book-02", title: "Sketchbook 02", year: 2026, color: "#ff8a00", folder: "assets/sketchbooks/book-02", pages: 0,
+      size: [8.25, 10], note: "Pages coming soon" },
   ],
 
   /* ---------- Extras ----------
