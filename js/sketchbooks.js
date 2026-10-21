@@ -264,15 +264,17 @@ function createViewer() {
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.01; sun.shadow.radius = 5;
   scene.add(sun);
 
+  // spinG turns the whole book (rotate button); book tilts inside it (vertical drag)
+  const spinG = new THREE.Group(); scene.add(spinG);
   const book = new THREE.Group();
   book.rotation.x = -0.42;
-  scene.add(book);
+  spinG.add(book);
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.ShadowMaterial({ opacity: 0.28 }));
   ground.position.z = -0.012; ground.receiveShadow = true; book.add(ground);
   const hitPlane = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshBasicMaterial({ visible: false }));
   book.add(hitPlane);
 
-  V = { root, canvas, renderer, scene, camera, book, hitPlane, leaves: [], W: 1, H: 1.38, open: false,
+  V = { root, canvas, renderer, scene, camera, book, spinG, spin: 0, spinTarget: 0, tilt: -0.42, hitPlane, leaves: [], W: 1, H: 1.38, open: false,
     zoom: 0, zoomX: 0, zoomY: 0, cam: { x: 0, y: 0, d: 4 }, raf: 0, last: 0 };
 
   addEventListener("resize", () => V.open && fitViewer());
@@ -371,9 +373,19 @@ function fitViewer() {
   V.camera.aspect = r.width / Math.max(1, r.height);
   V.camera.updateProjectionMatrix();
   const tan = Math.tan(THREE.MathUtils.degToRad(V.camera.fov / 2));
+  V.tan = tan;
+  V.fitD = fitDistance(V.spin);
+}
+// camera distance that fits the open spread, for any rotation of the book
+function fitDistance(spin) {
   const portrait = V.camera.aspect < 0.9;
-  const spreadW = V.W * 2 * (portrait ? 1.1 : 1.32);
-  V.fitD = Math.max(spreadW / (2 * tan * V.camera.aspect), (V.H * 1.55) / (2 * tan));
+  const sw = V.W * 2 * (portrait ? 1.1 : 1.32), sh = V.H * 1.55 * (0.8 + 0.2 * Math.cos(V.tilt));
+  const c = Math.abs(Math.cos(spin)), n = Math.abs(Math.sin(spin));
+  const w = c * sw + n * sh, h = n * sw + c * sh;
+  return Math.max(w / (2 * V.tan * V.camera.aspect), h / (2 * V.tan));
+}
+function rotateBook(dir = -1) {
+  V.spinTarget += dir * Math.PI / 2; V.zoom = 0;
 }
 
 /* ---- state helpers ---- */
@@ -425,21 +437,35 @@ function bindViewerInput() {
   canvas.addEventListener("pointerdown", (e) => {
     const p = toLocal(e); if (!p) return;
     canvas.setPointerCapture(e.pointerId);
-    drag = { x0: e.clientX, y0: e.clientY, start: p, leaf: null, moved: false, hist: [] };
+    drag = { x0: e.clientX, y0: e.clientY, start: p, leaf: null, moved: false, mode: null, hist: [], tilt0: V.tilt };
   });
   canvas.addEventListener("pointermove", (e) => {
     if (!drag) return;
     const p = toLocal(e); if (!p) return;
-    if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 8) {
+    const sx = e.clientX - drag.x0, sy = e.clientY - drag.y0;
+    if (!drag.moved && Math.hypot(sx, sy) > 8) {
       drag.moved = true;
-      const fwd = drag.start.x > 0;
-      const lf = fwd ? V.leaves.find((l) => l.target === 0) : [...V.leaves].reverse().find((l) => l.target === 1);
-      if (lf) { lf.dragging = true; lf.dir = fwd ? 1 : -1; lf.corner = clamp((drag.start.y / V.H) * 2, -1, 1); drag.leaf = lf; pageFlip(0.5); }
+      // which way is "across the pages" on screen right now (depends on rotation)?
+      const s0 = V.spin, along = sx * Math.cos(s0) - sy * Math.sin(s0), perp = sx * Math.sin(s0) + sy * Math.cos(s0);
+      if (Math.abs(perp) > Math.abs(along) * 1.2) drag.mode = "tilt";
+      else {
+        drag.mode = "flip";
+        // direction of the swipe picks the page — grab anywhere, even mid-page or between pages
+        const fwd = p.x - drag.start.x < 0;
+        const lf = fwd ? V.leaves.find((l) => l.target === 0) : [...V.leaves].reverse().find((l) => l.target === 1);
+        if (lf) { lf.dragging = true; lf.dir = fwd ? 1 : -1; lf.corner = clamp((drag.start.y / V.H) * 2, -1, 1); drag.leaf = lf; drag.p0 = lf.p; drag.x1 = p.x; pageFlip(0.5); }
+      }
+    }
+    if (drag.mode === "tilt") {
+      // finger toward the bottom of the page lays the book flat, toward the top tilts it back
+      const perp = sx * Math.sin(V.spin) + sy * Math.cos(V.spin);
+      V.tilt = clamp(drag.tilt0 + (perp / V.canvas.clientHeight) * 2.2, -1.05, 0);
+      return;
     }
     const lf = drag.leaf;
     if (lf) {
-      // the page tip follows your finger
-      const np = Math.acos(clamp(p.x / V.W, -1, 1)) / Math.PI;
+      // move the page by how far the finger travelled (no jump to the finger position)
+      const np = clamp(drag.p0 - (p.x - drag.x1) / (1.7 * V.W), 0, 1);
       const now = performance.now();
       drag.hist.push({ t: now, p: np }); while (drag.hist.length > 5) drag.hist.shift();
       lf.p = np; lf.dirty = true;
@@ -476,6 +502,7 @@ function bindViewerInput() {
     if (act === "prev") flip(-1);
     if (act === "close") closeViewer();
     if (act === "zoom") toggleZoom(V.zoom ? 0 : V.W * 0.5, 0);
+    if (act === "rotate") rotateBook(-1);
     if (act === "sound") { setMuted(!isMuted()); syncSoundBtn(); }
   });
   addEventListener("keydown", (e) => {
@@ -483,6 +510,7 @@ function bindViewerInput() {
     if (e.key === "ArrowRight") flip(1);
     if (e.key === "ArrowLeft") flip(-1);
     if (e.key === "Escape") closeViewer();
+    if (e.key === "r" || e.key === "R") rotateBook(e.shiftKey ? 1 : -1);
   });
 }
 function syncSoundBtn() { $('[data-act="sound"]', V.root).classList.toggle("off", isMuted()); }
@@ -524,16 +552,24 @@ function viewerFrame(now) {
   V.offsetX = (-V.W / 2) * (1 - pFirst) + (V.W / 2) * pLast;
   V.leaves.forEach((lf) => (lf.group.position.x = V.offsetX));
 
-  // camera: fit or zoomed-in on a page
+  // rotation + tilt glide smoothly to where they're set
+  V.spin = lerp(V.spin, V.spinTarget, 1 - Math.exp(-dt * 9));
+  V.book.rotation.x = lerp(V.book.rotation.x, V.tilt, 1 - Math.exp(-dt * 14));
+  V.fitD = fitDistance(V.spin);
+
+  // camera: fit or zoomed-in on a page (zoom point mapped through tilt + rotation)
   const k = 1 - Math.exp(-dt * 6);
   const tz = V.zoom ? V.fitD * 0.48 : V.fitD;
-  const tx = V.zoom ? V.zoomX + V.offsetX : 0, ty = V.zoom ? V.zoomY * Math.cos(0.42) : -0.04;
+  const lx = V.zoomX + V.offsetX, ly = V.zoomY * Math.cos(V.book.rotation.x), cs = Math.cos(V.spin), sn = Math.sin(V.spin);
+  const tx = V.zoom ? lx * cs - ly * sn : 0, ty = V.zoom ? lx * sn + ly * cs : -0.04;
   V.cam.d = lerp(V.cam.d, tz, k); V.cam.x = lerp(V.cam.x, tx, k); V.cam.y = lerp(V.cam.y, ty, k);
   V.camera.position.set(V.cam.x, V.cam.y, V.cam.d);
   V.camera.lookAt(V.cam.x, V.cam.y, 0);
 
   // entrance: the book drops in
-  if (V.intro < 1) { V.intro = Math.min(1, (now - V.introStart) / 550); const e = easeOut(V.intro); V.book.position.y = (1 - e) * -1.2; V.book.rotation.z = (1 - e) * 0.25; }
+  if (V.intro < 1) V.intro = Math.min(1, (now - V.introStart) / 550);
+  const ie = easeOut(V.intro);
+  V.spinG.position.y = (1 - ie) * -1.2; V.spinG.rotation.z = V.spin + (1 - ie) * 0.25;
 
   V.renderer.render(V.scene, V.camera);
   V.raf = requestAnimationFrame(viewerFrame);
@@ -551,6 +587,7 @@ export async function openViewer(b, startLeaf = 0) {
   syncSoundBtn();
   const { leaves, P } = await buildBook(b);
   V.leaves = leaves; V.P = P; V.zoom = 0; V.intro = reducedMotion ? 1 : 0;
+  V.spin = V.spinTarget = 0;                      // each book opens upright
   fitViewer();
   V.cam = { x: 0, y: 0, d: V.fitD };
   V.offsetX = -V.W / 2;
