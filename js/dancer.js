@@ -269,14 +269,15 @@ function makeDrawer(g) {  // g is swapped to a scratch canvas while building fro
     g.globalCompositeOperation = "destination-out";               // 1px gap so the iPod pops off the body
     g.beginPath(); g.roundRect(px - 6.2, py - 9, 12.4, 17.4, 2.6); g.fill();
     g.globalCompositeOperation = "source-over";
-    g.fillStyle = "#000";
-    g.beginPath(); g.arc(px + 2.4 * dir, py + 8.4, 2.8, 0, Math.PI * 2); g.fill();         // palm cupping the base
     g.fillStyle = "#fff"; g.beginPath(); g.roundRect(px - 5, py - 7.8, 10, 15.2, 2); g.fill();  // iPod body
     g.fillStyle = "#000"; g.fillRect(px - 3, py - 6, 6, 4.4);                                  // screen
-    g.strokeStyle = "#000"; g.lineWidth = 1; g.beginPath(); g.arc(px, py + 2.6, 2.5, 0, Math.PI * 2); g.stroke(); // click wheel
+    g.strokeStyle = "#000"; g.lineWidth = 1; g.beginPath(); g.arc(px, py + 1.8, 2.4, 0, Math.PI * 2); g.stroke(); // click wheel
+    // the hand cups the bottom: palm + outside of the hand cover the base,
+    // fingers curl up the back edge and the thumb rests on the wheel
     g.fillStyle = "#000";
-    for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(px + 5.4 * dir, py - 0.6 + i * 2.7, 1.35, 0, Math.PI * 2); g.fill(); } // fingers wrap the edge
-    g.beginPath(); g.ellipse(px - 5.2 * dir, py + 1.6, 1.25, 2.3, 0.35 * dir, 0, Math.PI * 2); g.fill();                     // thumb on the side
+    g.beginPath(); g.roundRect(px - 5.7, py + 4.6, 11.4, 4.2, [1, 1, 2.4, 2.4]); g.fill();             // palm across the base
+    for (let i = 0; i < 2; i++) { g.beginPath(); g.arc(px + 5.1 * dir, py + 0.6 + i * 2.4, 1.3, 0, Math.PI * 2); g.fill(); } // fingertips on the back edge
+    g.beginPath(); g.ellipse(px - 3.6 * dir, py + 3.2, 1.25, 2.1, 0.5 * dir, 0, Math.PI * 2); g.fill();                     // thumb up onto the wheel
 
     // earbuds → Y just under the chin → into the top of the iPod
     // near bud in the visible ear; the far bud is hidden behind the head, so its wire
