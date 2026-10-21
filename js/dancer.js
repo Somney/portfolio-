@@ -272,11 +272,13 @@ function makeDrawer(g) {  // g is swapped to a scratch canvas while building fro
     g.beginPath(); g.ellipse(px - 5.2 * dir, py + 1.6, 1.25, 2.3, 0.35 * dir, 0, Math.PI * 2); g.fill();                     // thumb on the side
 
     // earbuds → Y just under the chin → into the top of the iPod
-    const ear = hd(-3, -1.4), back = hd(-7.5, -6), split = add(R.neck, V(3.5, -8));
+    // near bud in the visible ear; the far bud is hidden behind the head, so its wire
+    // only shows where it drops from under the jaw on the front side
+    const ear = hd(-3, -1.4), back = hd(4.5, -9.6), split = add(R.neck, V(3.5, -8));
     const [ex, ey] = sp(ear), [bx, by] = sp(back), [sx, sy] = sp(split);
     g.strokeStyle = "#fff"; g.lineWidth = 1.3; g.lineCap = "round";
     g.beginPath(); g.moveTo(ex, ey); g.bezierCurveTo(ex - 0.5 * S.ct, ey - 7, sx - 3 * S.ct, sy + 3, sx, sy); g.stroke();   // hangs behind the jaw
-    g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + 3 * S.ct, sy - 1, sx, sy); g.stroke();
+    g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + 0.5 * S.ct, (by + sy) / 2, sx, sy); g.stroke();
     g.beginPath(); g.moveTo(sx, sy); g.bezierCurveTo(sx + 1 * S.ct, sy + 8, px - 2 * dir, py - 12, px - 1.5 * dir, py - 7.6); g.stroke();
     g.fillStyle = "#fff"; g.beginPath(); g.arc(ex, ey, 1.8, 0, Math.PI * 2); g.fill();
   };
