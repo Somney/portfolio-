@@ -7,6 +7,7 @@
 // the first tap/click/key anywhere. The pill bottom-right plays/pauses
 // (remembered), and music pauses while a video is open in the pop-up.
 import { el, esc } from "./util.js";
+import { attachMedia, resumeAudio } from "./sound.js";
 
 const ytId = (s = "") => (s.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/) || [])[1] || (/^[\w-]{11}$/.test(s) ? s : null);
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
@@ -17,10 +18,11 @@ async function fileBackend(cfg, ui) {
   if (!r.ok) throw new Error("file missing");
   const a = new Audio(cfg.file);
   a.loop = true; a.preload = "auto"; a.volume = Math.min(1, (cfg.volume ?? 35) / 100);
+  attachMedia(a);                                   // lets the signal bars read the real levels
   a.addEventListener("play", () => ui.state(true));
   a.addEventListener("pause", () => ui.state(false));
   return {
-    play: () => a.play().catch(() => {}), pause: () => a.pause(),
+    play: () => { resumeAudio(); a.play().catch(() => {}); }, pause: () => a.pause(),
     title: cfg.title || decodeURIComponent(cfg.file.split("/").pop().replace(/\.\w+$/, "").replace(/[-_]+/g, " ")),
   };
 }
@@ -95,6 +97,7 @@ export function initMusic(cfg) {
   });
 
   return {
+    isPlaying: () => playing,
     hold(on) {
       if (on) { held = true; if (playing) pause(); }
       else { held = false; if (wantOn && started) play(); }

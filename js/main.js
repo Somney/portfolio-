@@ -5,6 +5,8 @@ import { startDancer } from "./dancer.js";
 import { blip, flowTick } from "./sound.js";
 import { initMusic } from "./music.js";
 import { initGlitch } from "./glitch.js";
+import { startViz } from "./viz.js";
+import { getAnalyser } from "./sound.js";
 import { sortPosts } from "./social-sort.js";
 
 const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [], social = {} } = content;
@@ -73,7 +75,8 @@ const music = initMusic(content.music);
 /* ---------- Hero: colour cycling + rotating words ---------- */
 let heroIdx = 0;
 const heroBG = new SplashBG($(".hero .splash-bg"), PAL[0], INK);
-const dancer = startDancer($(".hero__dancer"), { ink: INK, image: hero.silhouetteImage });
+const viz = startViz($(".hero__viz"), { ink: INK, state: () => ({ analyser: getAnalyser(), playing: !!music?.isPlaying?.() }) });
+const dancer = startDancer($(".hero__dancer"), { ink: INK, image: hero.silhouetteImage, onBox: (b) => viz.place(b) });
 const wordEl = $(".hero__words span");
 wordEl.textContent = hero.words[0];
 function heroNext(x, y) {

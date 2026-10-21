@@ -3,13 +3,27 @@ let ctx = null;
 let muted = false;
 try { muted = localStorage.getItem("muted") === "1"; } catch {}
 
+// Every sound (site sounds + an uploaded music file) runs through one master
+// bus with an analyser on it, which drives the signal bars behind the dancer.
+let master = null, analyser = null;
+function ensureCtx() {
+  ctx ??= new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === "suspended") ctx.resume();
+  if (!master) {
+    analyser = ctx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.55;
+    master = ctx.createGain(); master.connect(analyser); analyser.connect(ctx.destination);
+  }
+  return ctx;
+}
 function ac() {
   if (muted) return null;
-  try {
-    ctx ??= new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === "suspended") ctx.resume();
-    return ctx;
-  } catch { return null; }
+  try { return ensureCtx(); } catch { return null; }
+}
+export const getAnalyser = () => analyser;
+export function resumeAudio() { try { ensureCtx(); } catch {} }
+// route an <audio> element (same-origin file) through the analyser
+export function attachMedia(el) {
+  try { ensureCtx().createMediaElementSource(el).connect(master); return true; } catch { return false; }
 }
 
 export const isMuted = () => muted;
@@ -27,11 +41,11 @@ export function blip(freq = 1800) {
   const hp = a.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 2200;
   const lp = a.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 7000;
   const ng = a.createGain(); ng.gain.value = 0.06;
-  src.connect(hp).connect(lp).connect(ng).connect(a.destination); src.start(t);
+  src.connect(hp).connect(lp).connect(ng).connect(master); src.start(t);
   const o = a.createOscillator(), g = a.createGain();
   o.type = "sine"; o.frequency.value = Math.min(2600, Math.max(1400, freq));
   g.gain.setValueAtTime(0.012, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
-  o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.03);
+  o.connect(g).connect(master); o.start(t); o.stop(t + 0.03);
 }
 
 // Filtered noise swoosh that sounds like a page turning.
@@ -46,7 +60,7 @@ export function pageFlip(strength = 1) {
   const src = a.createBufferSource(); src.buffer = buf;
   const f = a.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1800 + Math.random() * 1200; f.Q.value = 0.6;
   const g = a.createGain(); g.gain.value = 0.25 * strength;
-  src.connect(f).connect(g).connect(a.destination); src.start();
+  src.connect(f).connect(g).connect(master); src.start();
 }
 
 // Cover Flow tick: a soft, rounded click sent through a gentle echo
@@ -57,8 +71,8 @@ function echoBus(a) {
   if (echo) return echo;
   const input = a.createGain(), wet = a.createGain(), d = a.createDelay(1), fb = a.createGain(), lp = a.createBiquadFilter();
   d.delayTime.value = 0.105; fb.gain.value = 0.34; lp.type = "lowpass"; lp.frequency.value = 2200; wet.gain.value = 0.45;
-  input.connect(d); d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(wet); wet.connect(a.destination);
-  input.connect(a.destination);                      // dry signal
+  input.connect(d); d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(wet); wet.connect(master);
+  input.connect(master);                      // dry signal
   return (echo = input);
 }
 export function flowTick(i = 0) {

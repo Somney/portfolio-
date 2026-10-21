@@ -291,7 +291,7 @@ function makeDrawer(g) {  // g is swapped to a scratch canvas while building fro
 }
 
 /* ---------------- public: start the hero animation ---------------- */
-export function startDancer(canvas, { ink = "#0d0d0d", image = null } = {}) {
+export function startDancer(canvas, { ink = "#0d0d0d", image = null, onBox = null } = {}) {
   const g = canvas.getContext("2d");
   const lo = document.createElement("canvas"); lo.width = LW; lo.height = LH;
   const lg = lo.getContext("2d", { willReadFrequently: true });
@@ -330,6 +330,7 @@ export function startDancer(canvas, { ink = "#0d0d0d", image = null } = {}) {
         maskImage: s * dpr >= 4 ? mask : "", webkitMaskImage: s * dpr >= 4 ? mask : "", maskSize: cell, webkitMaskSize: cell,
         maskComposite: "intersect", webkitMaskComposite: "source-in" });
       canvas.width = LW * G; canvas.height = LH * G; box = { s };
+      onBox?.({ left, top, width: LW * s, height: LH * s, floor: FLOOR / LH });
     }
     if (reducedMotion) frame(performance.now());
   };

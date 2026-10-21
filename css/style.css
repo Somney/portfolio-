@@ -67,6 +67,7 @@ section, footer { position: relative; }
 
 /* ---------- hero ---------- */
 .hero { min-height: 100svh; overflow: hidden; display: flex; align-items: center; cursor: crosshair; }
+.hero__viz { position: absolute; z-index: 1; pointer-events: none; image-rendering: pixelated; }
 .hero__dancer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
 .hero__text { position: relative; z-index: 2; padding: 0 var(--gutter); max-width: 62%; }
 .hero__kicker { font-weight: 700; letter-spacing: .3em; text-transform: uppercase; font-size: 13px; margin: 0 0 12px; }
