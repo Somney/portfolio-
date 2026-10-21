@@ -65,10 +65,10 @@ export default {
               the song; a website can't turn those off.
      volume: 0–100.  title / cover: optional (cover = image path).        */
   music: {
-    file: "",                       // e.g. "assets/music/song.mp3" once uploaded
+    file: "assets/music/song.mp3",
     youtube: "https://youtu.be/fFMYua37UGQ",
     volume: 35,
-    title: "",
+    title: "Be There — Gygas",
   },
 
   /* ---------- Glitch overlay ----------
