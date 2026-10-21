@@ -126,7 +126,7 @@ export default {
         { title: "Through the Window", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-07.jpg" },
         { title: "Flex", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-08.jpg" },
         { title: "Spring Canopy", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-10.jpg" },
-        { title: "Studio Portrait", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-13.jpg" },
+        { title: "Ticket to Ride", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-13.jpg" },
         { title: "Waistband", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-11.jpg" },
         { title: "Rooftop Figure", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-02.jpg" },
         { title: "Swirl Head", year: 2026, medium: "Acrylic marker in sketchbook", image: "assets/sketchbooks/book-01/page-16.jpg" },
