@@ -252,7 +252,14 @@ function makeDrawer(g) {  // g is swapped to a scratch canvas while building fro
     g.drawImage(lay.farLeg, 0, 0);
     cut(g, lay.nearLeg); g.drawImage(lay.nearLeg, 0, 0);          // legs separate from each other
     cut(lay.farArm, lay.body);                                     // far arm tucks behind the body
-    g.drawImage(lay.farArm, 0, 0); g.drawImage(lay.body, 0, 0);
+    g.drawImage(lay.farArm, 0, 0);
+    // far earbud wire goes BEHIND the body: the jaw, neck and shoulders cover it,
+    // so it only peeks through gaps, like a real wire tucked behind the collar
+    const farFrom = hd(4.5, -9.6), splitPt = add(R.neck, V(3.5, -8));
+    { const [bx, by] = sp(farFrom), [sx, sy] = sp(splitPt);
+      g.strokeStyle = "#fff"; g.lineWidth = 1.3; g.lineCap = "round";
+      g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + 0.5 * S.ct, (by + sy) / 2, sx, sy); g.stroke(); }
+    g.drawImage(lay.body, 0, 0);
     cut(g, lay.nearArm); g.drawImage(lay.nearArm, 0, 0);          // iPod arm reads in front of the hoodie
 
     // iPod held in the hand: white body (screen + click wheel), ink fingers
@@ -274,11 +281,10 @@ function makeDrawer(g) {  // g is swapped to a scratch canvas while building fro
     // earbuds → Y just under the chin → into the top of the iPod
     // near bud in the visible ear; the far bud is hidden behind the head, so its wire
     // only shows where it drops from under the jaw on the front side
-    const ear = hd(-3, -1.4), back = hd(4.5, -9.6), split = add(R.neck, V(3.5, -8));
-    const [ex, ey] = sp(ear), [bx, by] = sp(back), [sx, sy] = sp(split);
+    const ear = hd(-3, -1.4), split = splitPt;
+    const [ex, ey] = sp(ear), [sx, sy] = sp(split);
     g.strokeStyle = "#fff"; g.lineWidth = 1.3; g.lineCap = "round";
     g.beginPath(); g.moveTo(ex, ey); g.bezierCurveTo(ex - 0.5 * S.ct, ey - 7, sx - 3 * S.ct, sy + 3, sx, sy); g.stroke();   // hangs behind the jaw
-    g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + 0.5 * S.ct, (by + sy) / 2, sx, sy); g.stroke();
     g.beginPath(); g.moveTo(sx, sy); g.bezierCurveTo(sx + 1 * S.ct, sy + 8, px - 2 * dir, py - 12, px - 1.5 * dir, py - 7.6); g.stroke();
     g.fillStyle = "#fff"; g.beginPath(); g.arc(ex, ey, 1.8, 0, Math.PI * 2); g.fill();
   };
