@@ -3,7 +3,7 @@
 // full-screen transition between sections.
 import { seeded, easeOut, easeInOut, reducedMotion } from "./util.js";
 
-const DPR = () => Math.min(2, window.devicePixelRatio || 1);
+const DPR = () => Math.min(1, window.devicePixelRatio || 1);   // soft blobs: 1x is plenty and 4x cheaper on retina
 let splashCount = 0;
 
 function makeSplash(x, y, w, h) {

@@ -48,3 +48,33 @@ export function pageFlip(strength = 1) {
   const g = a.createGain(); g.gain.value = 0.25 * strength;
   src.connect(f).connect(g).connect(a.destination); src.start();
 }
+
+// Cover Flow tick: a soft, rounded click sent through a gentle echo
+// (short delay with filtered feedback) — like flicking through covers on
+// an iPod in a quiet room. Rate-limited so fast drags stay smooth.
+let echo = null, lastFlow = 0;
+function echoBus(a) {
+  if (echo) return echo;
+  const input = a.createGain(), wet = a.createGain(), d = a.createDelay(1), fb = a.createGain(), lp = a.createBiquadFilter();
+  d.delayTime.value = 0.105; fb.gain.value = 0.34; lp.type = "lowpass"; lp.frequency.value = 2200; wet.gain.value = 0.45;
+  input.connect(d); d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(wet); wet.connect(a.destination);
+  input.connect(a.destination);                      // dry signal
+  return (echo = input);
+}
+export function flowTick(i = 0) {
+  const a = ac(); if (!a) return;
+  const now = performance.now(); if (now - lastFlow < 38) return; lastFlow = now;
+  const t = a.currentTime, bus = echoBus(a);
+  // soft "tk": short noise burst through a bandpass
+  const n = Math.floor(a.sampleRate * 0.014), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+  for (let k = 0; k < n; k++) d[k] = (Math.random() * 2 - 1) * Math.pow(1 - k / n, 3);
+  const src = a.createBufferSource(); src.buffer = buf;
+  const bp = a.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 2400; bp.Q.value = 1.1;
+  const ng = a.createGain(); ng.gain.value = 0.09;
+  src.connect(bp).connect(ng).connect(bus); src.start(t);
+  // warm body under it, pitch drifts slightly per cover
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = "triangle"; o.frequency.setValueAtTime(1050 + (i % 7) * 35, t); o.frequency.exponentialRampToValueAtTime(700, t + 0.05);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.03, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+  o.connect(g).connect(bus); o.start(t); o.stop(t + 0.08);
+}

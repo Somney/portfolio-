@@ -2,7 +2,7 @@ import content from "../content.js";
 import { $, $$, el, esc, clamp, smartImg, contrastOn, reducedMotion } from "./util.js";
 import { SplashBG, splashTransition } from "./splash.js";
 import { startDancer } from "./dancer.js";
-import { blip } from "./sound.js";
+import { blip, flowTick } from "./sound.js";
 import { initMusic } from "./music.js";
 import { initGlitch } from "./glitch.js";
 import { sortPosts } from "./social-sort.js";
@@ -11,7 +11,7 @@ const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [], soci
 const INK = theme.ink, PAPER = theme.paper, PAL = theme.palette;
 
 /* ---------- Social feed (written daily by the GitHub Action) ---------- */
-const feed = await fetch("social/feed.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+const feed = await fetch("social/feed.json", { credentials: "same-origin", mode: "cors" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 const buckets = sortPosts(feed?.posts || [], social.sort || [], { hide: social.hide || [] }).filter((b) => b.posts.length);
 const tagLine = (p, n = 3) => (p.tags || []).slice(0, n).map((t) => "#" + t).join(" ");
 const platformName = (p) => (p.platform === "instagram" ? "Instagram" : "TikTok");
@@ -56,6 +56,15 @@ for (const s of artist.socials || []) {
 }
 
 let glitch = { burst() {} };   // set up at the end, once the page is built
+
+/* ---------- Smooth scrolling: full-screen overlays step aside while you scroll ---------- */
+{
+  let t = 0; const root = document.documentElement;
+  addEventListener("scroll", () => {
+    if (!t) root.classList.add("is-scrolling");
+    clearTimeout(t); t = setTimeout(() => { root.classList.remove("is-scrolling"); t = 0; }, 160);
+  }, { passive: true });
+}
 
 /* ---------- Background music (YouTube, starts on first tap) ---------- */
 const music = initMusic(content.music);
@@ -202,7 +211,7 @@ function updateCaption() {
 
 function setActive(i) {
   const n = clamp(i, 0, cfItems.length - 1);
-  if (n !== active) blip(1500 + (n % 6) * 60);
+  if (n !== active) flowTick(n);
   active = n; layoutCoverflow(active); updateCaption();
 }
 
@@ -232,19 +241,25 @@ function switchSeries(i, e) {
 let cfDragged = false;
 {
   const cf = $(".coverflow");
-  let x0 = 0, start = 0, down = false;
-  cf.addEventListener("pointerdown", (e) => { down = true; cfDragged = false; x0 = e.clientX; start = active; });
+  let x0 = 0, start = 0, down = false, dragIdx = 0;
+  cf.addEventListener("pointerdown", (e) => { down = true; cfDragged = false; x0 = e.clientX; start = active; dragIdx = active; });
   addEventListener("pointermove", (e) => {
     if (!down) return;
     const dx = e.clientX - x0;
     if (Math.abs(dx) > 6 && !cfDragged) { cfDragged = true; stage.classList.add("dragging"); }
-    if (cfDragged) layoutCoverflow(clamp(start - dx / ((cfItems[0]?.offsetWidth || 260) * 0.45), -0.4, cfItems.length - 0.6));
+    if (cfDragged) {
+      const pos = clamp(start - dx / ((cfItems[0]?.offsetWidth || 260) * 0.45), -0.4, cfItems.length - 0.6);
+      const idx = Math.round(pos);
+      if (idx !== dragIdx) { dragIdx = idx; flowTick(idx); }
+      layoutCoverflow(pos);
+    }
   });
   addEventListener("pointerup", (e) => {
     if (!down) return; down = false;
     stage.classList.remove("dragging");
     if (cfDragged) {
-      setActive(Math.round(start - (e.clientX - x0) / ((cfItems[0]?.offsetWidth || 260) * 0.45)));
+      const land = clamp(Math.round(start - (e.clientX - x0) / ((cfItems[0]?.offsetWidth || 260) * 0.45)), 0, cfItems.length - 1);
+      if (land === dragIdx) { active = land; layoutCoverflow(active); updateCaption(); } else setActive(land);
       setTimeout(() => (cfDragged = false), 0);
     }
   });

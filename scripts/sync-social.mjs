@@ -387,6 +387,29 @@ if (!fixture && !args.includes("--no-art")) {
   await fs.rm(TMP, { recursive: true, force: true });
 }
 
+// Shrink big images (TikTok frames can be 4K / 3 MB) — cards never need more
+// than ~1080px. Re-encodes in place; already-small files are left alone.
+async function optimizeImages() {
+  const dirs = ["tiktok", "instagram"].map((d) => path.join(ROOT, MEDIA, d));
+  let n = 0, saved = 0;
+  for (const dir of dirs) {
+    let files = [];
+    try { files = (await fs.readdir(dir)).filter((f) => /\.jpe?g$/i.test(f)); } catch { continue; }
+    for (const f of files) {
+      const file = path.join(dir, f), before = (await fs.stat(file)).size;
+      if (before < 260_000) continue;
+      const tmp = file + ".tmp.jpg";
+      try {
+        await run("ffmpeg", ["-y", "-loglevel", "error", "-i", file, "-vf", "scale='min(1080,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease", "-q:v", "4", tmp], { timeout: 60_000 });
+        const after = (await fs.stat(tmp)).size;
+        if (after < before) { await fs.rename(tmp, file); n++; saved += before - after; } else await fs.rm(tmp);
+      } catch { await fs.rm(tmp, { force: true }); }
+    }
+  }
+  if (n) log(`Optimized ${n} image(s), saved ${(saved / 1e6).toFixed(1)} MB`);
+}
+if (!fixture) await optimizeImages();
+
 const list = [...posts.values()].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 const out = { updated: new Date().toISOString(), sources: { tiktok: tt || null, instagram: cfg.instagram || null }, posts: list };
 await fs.mkdir(path.dirname(FEED), { recursive: true });

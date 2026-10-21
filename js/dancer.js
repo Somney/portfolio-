@@ -300,13 +300,32 @@ export function startDancer(canvas, { ink = "#0d0d0d", image = null } = {}) {
   if (image) { img = new Image(); img.src = image; img.onerror = () => (img = null); }
 
   let w = 0, h = 0, dpr = 1, raf = 0, visible = true, grid = null, gridScale = 0;
+  // Performance: in sprite mode the canvas covers only the sprite and is drawn
+  // at G px per sprite pixel; CSS scales it up crisply (image-rendering: pixelated).
+  const G = 1;   // draw at true sprite size; CSS does the (free, crisp) upscale
+  let box = null;
   const resize = () => {
-    const r = canvas.getBoundingClientRect();
+    const r = canvas.parentElement.getBoundingClientRect();
     dpr = Math.min(2, devicePixelRatio || 1);
-    w = r.width; h = r.height; canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    w = r.width; h = r.height;
+    const narrow = w < 720;
+    if (img) {
+      Object.assign(canvas.style, { inset: "0", width: "100%", height: "100%", left: "", top: "" });
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); box = null;
+    } else {
+      const s = Math.max(2, Math.floor(((narrow ? 0.52 : 0.8) * h * dpr) / 114)) / dpr;   // CSS px per sprite pixel
+      const left = (narrow ? 0.68 : 0.72) * w - (LW * s) / 2, top = (narrow ? 0.995 : 0.965) * h - FLOOR * s;
+      // LCD pixel grid as a static CSS mask: thin see-through lines between sprite pixels
+      const line = Math.max(1, Math.round(s / 7)), cell = `${s}px ${s}px`;
+      const mask = `linear-gradient(to right, #000 calc(100% - ${line}px), rgba(0,0,0,.68) 0), linear-gradient(to bottom, #000 calc(100% - ${line}px), rgba(0,0,0,.68) 0)`;
+      Object.assign(canvas.style, { inset: "auto", left: `${left}px`, top: `${top}px`, width: `${LW * s}px`, height: `${LH * s}px`, imageRendering: "pixelated",
+        maskImage: s * dpr >= 4 ? mask : "", webkitMaskImage: s * dpr >= 4 ? mask : "", maskSize: cell, webkitMaskSize: cell,
+        maskComposite: "intersect", webkitMaskComposite: "source-in" });
+      canvas.width = LW * G; canvas.height = LH * G; box = { s };
+    }
     if (reducedMotion) frame(performance.now());
   };
-  new ResizeObserver(resize).observe(canvas);
+  new ResizeObserver(resize).observe(canvas.parentElement);
   resize();
   new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible && !raf) raf = requestAnimationFrame(frame); }).observe(canvas);
 
@@ -332,9 +351,16 @@ export function startDancer(canvas, { ink = "#0d0d0d", image = null } = {}) {
     return grid;
   }
 
+  // Smoothness: hold the dancer still while the page is actively scrolling
+  // (his frames then don't compete with the scroll) and cap him at ~30 fps,
+  // which reads as a crisp LCD/handheld frame rate anyway.
+  let scrolling = 0, lastDraw = 0;
+  addEventListener("scroll", () => { scrolling = performance.now(); }, { passive: true });
   function frame(now) {
     raf = 0;
     if (!visible) return;
+    if (!reducedMotion && (now - scrolling < 140 || now - lastDraw < 12)) { raf = requestAnimationFrame(frame); return; }
+    lastDraw = now;
     const t = reducedMotion ? 0.9 : now / 1000;
     const narrow = w < 720;
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -352,22 +378,14 @@ export function startDancer(canvas, { ink = "#0d0d0d", image = null } = {}) {
     } else {
       draw(choreo(t * BPM / 60));
       quantize();
-      // integer pixel scale: the figure (~114 px tall) fills most of the hero
-      const s = Math.max(2, Math.floor(((narrow ? 0.52 : 0.8) * h * dpr) / 114));
-      const ox = Math.round((narrow ? 0.68 : 0.72) * w * dpr - (LW * s) / 2);
-      const oy = Math.round((narrow ? 0.995 : 0.965) * h * dpr - FLOOR * s);
       g.imageSmoothingEnabled = false;
+      const S = G;
       // LCD persistence (faint trail) + the soft shadow LCD segments cast on their backing
-      g.globalAlpha = 0.1; g.drawImage(ghost, ox, oy, LW * s, LH * s);
-      g.globalAlpha = 0.2; g.drawImage(sh, ox + Math.round(s * 0.7), oy + Math.round(s * 0.7), LW * s, LH * s);
-      g.globalAlpha = 1; g.drawImage(px, ox, oy, LW * s, LH * s);
+      g.globalAlpha = 0.1; g.drawImage(ghost, 0, 0, LW * S, LH * S);
+      g.globalAlpha = 0.2; g.drawImage(sh, 1, 1, LW * S, LH * S);
+      g.globalAlpha = 1; g.drawImage(px, 0, 0, LW * S, LH * S);
       gg.clearRect(0, 0, LW, LH); gg.drawImage(sh, 0, 0);
-      // LCD pixel grid on the lit pixels
-      if (s >= 4) {
-        g.globalCompositeOperation = "destination-out";
-        g.translate(ox, oy); g.fillStyle = gridPattern(s); g.fillRect(0, 0, LW * s, LH * s);
-        g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-over";
-      }
+      // (the LCD pixel grid is a static CSS mask — see resize)
     }
     if (!reducedMotion) raf = requestAnimationFrame(frame);
   }
@@ -378,4 +396,4 @@ export function startDancer(canvas, { ink = "#0d0d0d", image = null } = {}) {
 }
 
 // exposed for previews/tests
-export const _debug = { choreo, MOVES, LW, LH, rigPoints };
+export const _debug = { choreo, MOVES, LW, LH, rigPoints, makeDrawer };

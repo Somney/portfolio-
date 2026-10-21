@@ -101,25 +101,34 @@ export function initGlitch(cfg = {}, { palette, ink, local = [] }) {
   const resize = () => { W = innerWidth; H = innerHeight; c.width = Math.round(W / 2); c.height = Math.round(H / 2); }; // half-res = chunky bitmap pixels
   addEventListener("resize", resize); resize();
 
+  const root = document.documentElement;
   const plates = [];
   const MAX = 18;
+  // never do image work mid-scroll or while the page is busy: wait for an idle moment
+  const idle = () => new Promise((res) => {
+    const go = () => (root.classList.contains("is-scrolling") ? setTimeout(go, 250)
+      : (window.requestIdleCallback ? requestIdleCallback(() => res(), { timeout: 2000 }) : setTimeout(res, 60)));
+    go();
+  });
   async function addPlate(urlPromise) {
     try {
       const url = await urlPromise;
       const im = await loadImg(url);
+      await im.decode?.().catch(() => {});      // decode off the main thread
+      await idle();
       const pl = makePlate(im, palette, ink);
       plates.push(pl); if (plates.length > MAX) plates.splice(Math.floor(Math.random() * (plates.length - 4)), 1);
     } catch { /* blocked, offline or not CORS-clean — just skip it */ }
   }
   // seed: your own art first (same-origin, always works), then stock
-  local.sort(() => Math.random() - 0.5).slice(0, 6).forEach((u) => addPlate(Promise.resolve(u)));
+  setTimeout(() => local.sort(() => Math.random() - 0.5).slice(0, 6).forEach((u, i) => setTimeout(() => addPlate(Promise.resolve(u)), i * 300)), 2500);
   const stock = cfg.stock !== false;
   const refill = () => {
     if (!stock) { if (local.length) addPlate(Promise.resolve(pick(local))); return; }
     const src = Math.random() < 0.6 ? SOURCES.artic : SOURCES.picsum;
     addPlate(src().catch(() => SOURCES.picsum()));
   };
-  for (let i = 0; i < 6; i++) setTimeout(refill, 400 + i * 700);
+  for (let i = 0; i < 6; i++) setTimeout(refill, 4000 + i * 900);
   setInterval(refill, (cfg.refreshSeconds ?? 20) * 1000);   // keep the visuals original
 
   /* pieces on screen */
@@ -173,9 +182,10 @@ export function initGlitch(cfg = {}, { palette, ink, local = [] }) {
   }
 
   let raf = 0, last = 0;
-  function kick() { if (!raf) raf = requestAnimationFrame(frame); }
+  function kick() { c.style.display = ""; if (!raf) raf = requestAnimationFrame(frame); }
   function frame(now) {
     raf = 0;
+    if (root.classList.contains("is-scrolling")) { kick(); return; }   // paused while scrolling (layer is hidden)
     if (now - last < 45) { kick(); return; }                     // ~22 fps: steppy, like a broken screen
     last = now;
     g.clearRect(0, 0, c.width, c.height);
@@ -202,12 +212,14 @@ export function initGlitch(cfg = {}, { palette, ink, local = [] }) {
       }
     }
     g.globalAlpha = 1;
+    // nothing on screen → take the layer out of compositing entirely
+    c.style.display = pieces.length ? "" : "none";
     if (pieces.length) kick();
   }
 
   // ambient bursts every few seconds while the page is visible
   (function loop() {
-    setTimeout(() => { if (!document.hidden) burst(0.8 + rnd(0.6)); loop(); }, rnd(2600, 6500) / Math.max(0.3, intensity));
+    setTimeout(() => { if (!document.hidden && !root.classList.contains("is-scrolling")) burst(0.8 + rnd(0.6)); loop(); }, rnd(2600, 6500) / Math.max(0.3, intensity));
   })();
 
   // glitch headings now and then

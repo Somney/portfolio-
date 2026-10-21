@@ -67,7 +67,7 @@ let shelf = null;
 
 export function initShelf({ books, theme, canvas, label, onOpen }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.setPixelRatio(Math.min(1.5, devicePixelRatio));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -78,7 +78,7 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x404040, 1.6));
   const sun = new THREE.DirectionalLight(0xffffff, 2.2);
   sun.position.set(-4, 10, 6); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 30 });
   sun.shadow.radius = 6; sun.shadow.bias = -0.0005;
   scene.add(sun);
@@ -248,7 +248,7 @@ let V = null; // lazily-created viewer state
 function createViewer() {
   const root = $(".viewer"), canvas = $(".viewer__canvas", root);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.setPixelRatio(Math.min(1.5, devicePixelRatio));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;

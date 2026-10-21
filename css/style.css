@@ -9,6 +9,8 @@
   --display: "Rubik Mono One", "Arial Black", Impact, sans-serif;
   --body: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --chrome: linear-gradient(135deg, #fff 0%, #cfd3da 30%, #fdfdfd 50%, #a9aeb7 70%, #f2f2f2 100%);
+  /* matte white plastic, like an iPod's front */
+  --plastic: linear-gradient(180deg, #fdfdfb 0%, #f3f2ee 55%, #e9e8e3 100%);
   --gutter: clamp(16px, 4vw, 48px);
 }
 *, *::before, *::after { box-sizing: border-box; }
@@ -43,12 +45,12 @@ img { display: block; max-width: 100%; }
 .toplinks a:hover { background: var(--paper); color: var(--ink); transform: translateY(-2px) rotate(-2deg); }
 .ipod-btn {
   width: 44px; height: 64px; border: 0; border-radius: 10px; padding: 6px;
-  background: var(--chrome); box-shadow: 0 6px 20px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.7);
+  background: var(--plastic); box-shadow: 0 4px 14px rgba(0,0,0,.22), inset 0 0 0 1px rgba(0,0,0,.08);
   display: grid; grid-template-rows: 22px 1fr; place-items: center; gap: 4px; transition: transform .2s;
 }
 .ipod-btn:hover { transform: rotate(-8deg) scale(1.06); }
 .ipod-btn__screen { width: 100%; height: 22px; border-radius: 3px; background: linear-gradient(#b8d8ff, #6aa7ff); }
-.ipod-btn__wheel { width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle, #fff 30%, #d6d6d6 32%); }
+.ipod-btn__wheel { width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle, #fbfbf9 30%, #e2e1dc 32%); }
 @media (max-width: 760px) { .toplinks { display: none; } .ipod-btn { margin-left: auto; } }
 
 /* ---------- shared section bits ---------- */
@@ -89,7 +91,7 @@ section, footer { position: relative; }
 
 /* ---------- marquee ---------- */
 .marquee { background: var(--ink); color: var(--paper); overflow: hidden; border-block: 3px solid var(--paper); }
-.marquee__track {
+.marquee__track { will-change: transform;
   white-space: nowrap; font-family: var(--display); font-size: 22px; padding: 12px 0;
   display: inline-block; animation: marquee 30s linear infinite;
 }
@@ -197,7 +199,7 @@ section, footer { position: relative; }
 .chip:hover { transform: translateY(-2px); background: var(--paper); color: var(--ink); }
 
 /* ---------- extras ---------- */
-.extras { overflow-x: clip;
+.extras { overflow-x: clip; content-visibility: auto; contain-intrinsic-size: auto 1400px;
   background: var(--paper); padding-bottom: 100px;
   background-image: radial-gradient(rgba(0,0,0,.09) 1.5px, transparent 1.6px); background-size: 22px 22px;
 }
@@ -250,7 +252,7 @@ button.x-card:hover, a.x-card:hover { rotate: 0deg; translate: -4px -6px; box-sh
 .lb-link { color: var(--c0); font-weight: 700; justify-self: center; }
 
 /* ---------- contact ---------- */
-.contact { background: var(--c1); padding: 120px var(--gutter) 40px; text-align: center; overflow: hidden; }
+.contact { content-visibility: auto; contain-intrinsic-size: auto 800px; background: var(--c1); padding: 120px var(--gutter) 40px; text-align: center; overflow: hidden; }
 .contact__big { font-family: var(--display); font-weight: 400; font-size: clamp(64px, 18vw, 260px); line-height: .8; margin: 0; letter-spacing: -.05em; }
 .contact__bio { max-width: 560px; margin: 28px auto 0; font-size: 18px; font-weight: 500; }
 .contact__email {
@@ -272,8 +274,8 @@ button.x-card:hover, a.x-card:hover { rotate: 0deg; translate: -4px -6px; box-sh
 .ipod.open { opacity: 1; }
 .ipod__body {
   width: min(300px, 80vw); aspect-ratio: 300 / 500; border-radius: 34px; padding: 22px;
-  background: var(--chrome); display: grid; grid-template-rows: 44% 1fr; gap: 22px;
-  box-shadow: 0 40px 80px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,255,255,.8), inset 0 -6px 12px rgba(0,0,0,.15);
+  background: var(--plastic); display: grid; grid-template-rows: 44% 1fr; gap: 22px;
+  box-shadow: 0 30px 60px rgba(0,0,0,.35), inset 0 0 0 1px rgba(0,0,0,.07), inset 0 -3px 8px rgba(0,0,0,.05);
   transform: translateY(40px) rotate(-6deg) scale(.9); transition: transform .45s cubic-bezier(.2,1.5,.4,1);
 }
 .ipod.open .ipod__body { transform: none; }
@@ -283,13 +285,13 @@ button.x-card:hover, a.x-card:hover { rotate: 0deg; translate: -4px -6px; box-sh
 .ipod__list { list-style: none; margin: 0; padding: 0; }
 .ipod__list li { display: flex; justify-content: space-between; padding: 5px 10px; font-weight: 700; cursor: pointer; }
 .ipod__list li.on { background: linear-gradient(#5fa8ff, #1d6fe0); color: #fff; }
-.wheel { position: relative; width: 82%; aspect-ratio: 1; margin: auto; border-radius: 50%; background: #fff; box-shadow: inset 0 2px 8px rgba(0,0,0,.15), 0 1px 0 #fff; touch-action: none; }
+.wheel { position: relative; width: 82%; aspect-ratio: 1; margin: auto; border-radius: 50%; background: #f6f5f2; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06), inset 0 1px 3px rgba(0,0,0,.06); touch-action: none; }
 .wheel__lbl { position: absolute; border: 0; background: none; color: #999; font-weight: 700; font-size: 12px; padding: 8px; }
 .wheel__lbl--top { top: 6%; left: 50%; translate: -50% 0; }
 .wheel__lbl--bottom { bottom: 6%; left: 50%; translate: -50% 0; }
 .wheel__lbl--left { left: 4%; top: 50%; translate: 0 -50%; }
 .wheel__lbl--right { right: 4%; top: 50%; translate: 0 -50%; }
-.wheel__center { position: absolute; inset: 33%; border-radius: 50%; border: 0; background: var(--chrome); box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.wheel__center { position: absolute; inset: 33%; border-radius: 50%; border: 0; background: var(--plastic); box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.1); }
 .wheel__center:active { transform: scale(.95); }
 .ipod__hint { color: var(--paper); font-weight: 500; font-size: 13px; margin: 0; }
 
@@ -362,11 +364,11 @@ button.x-card:hover, a.x-card:hover { rotate: 0deg; translate: -4px -6px; box-sh
 @media (max-width: 520px) { .np__txt { display: none; } .np__pill { padding-right: 6px; } }
 
 /* ---------- glitch layer + CRT texture ---------- */
+html.is-scrolling .glitch-layer, html.is-scrolling body::after { visibility: hidden; }
 .glitch-layer { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 45; image-rendering: pixelated; }
 body::after {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 44;
-  background: repeating-linear-gradient(to bottom, rgba(0,0,0,.06) 0 1px, transparent 1px 3px);
-  mix-blend-mode: multiply;
+  background: repeating-linear-gradient(to bottom, rgba(0,0,0,.05) 0 1px, transparent 1px 3px);
 }
 .sec-title, .hero__name, .contact__big { position: relative; }
 .glitching { animation: gl-shake .12s steps(2) infinite; }
