@@ -275,7 +275,7 @@ function createViewer() {
   book.add(hitPlane);
 
   V = { root, canvas, renderer, scene, camera, book, spinG, spin: 0, spinTarget: 0, tilt: -0.42, hitPlane, leaves: [], W: 1, H: 1.38, open: false,
-    zoom: 0, zoomX: 0, zoomY: 0, cam: { x: 0, y: 0, d: 4 }, raf: 0, last: 0 };
+    zoom: 1, fx: 0, fy: -0.04, gesture: false, cam: { x: 0, y: 0, d: 4 }, raf: 0, last: 0 };
 
   addEventListener("resize", () => V.open && fitViewer());
   bindViewerInput();
@@ -385,7 +385,7 @@ function fitDistance(spin) {
   return Math.max(w / (2 * V.tan * V.camera.aspect), h / (2 * V.tan));
 }
 function rotateBook(dir = -1) {
-  V.spinTarget += dir * Math.PI / 2; V.zoom = 0;
+  V.spinTarget += dir * Math.PI / 2; resetZoom();
 }
 
 /* ---- state helpers ---- */
@@ -422,7 +422,10 @@ function flip(dir) {
 function bindViewerInput() {
   const { canvas, root } = V;
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), local = new THREE.Vector3();
-  let drag = null, lastTap = 0;
+  let drag = null, lastTap = 0, pinch = null, lock = false;
+  const pts = new Map();
+  const off = (x, y) => { const r = canvas.getBoundingClientRect(); return { x: x - r.left - r.width / 2, y: -(y - r.top - r.height / 2) }; };
+  const releaseLeaf = () => { const lf = drag?.leaf; if (lf) { lf.dragging = false; lf.v = 0; } };
 
   const toLocal = (e) => {
     const r = canvas.getBoundingClientRect();
@@ -435,12 +438,36 @@ function bindViewerInput() {
   };
 
   canvas.addEventListener("pointerdown", (e) => {
-    const p = toLocal(e); if (!p) return;
     canvas.setPointerCapture(e.pointerId);
-    drag = { x0: e.clientX, y0: e.clientY, start: p, leaf: null, moved: false, mode: null, hist: [], tilt0: V.tilt };
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) {                                   // second finger: start a pinch
+      releaseLeaf(); drag = null; lock = true;
+      const [a, b] = [...pts.values()];
+      const m = off((a.x + b.x) / 2, (a.y + b.y) / 2), z0 = V.zoom;
+      pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y), z0, wx: V.cam.x + m.x / pxPerUnit(z0), wy: V.cam.y + m.y / pxPerUnit(z0) };
+      V.gesture = true; return;
+    }
+    if (lock || pts.size > 2) return;
+    const p = toLocal(e); if (!p) return;
+    drag = { x0: e.clientX, y0: e.clientY, start: p, leaf: null, moved: false, mode: null, hist: [], tilt0: V.tilt, fx0: V.fx, fy0: V.fy };
   });
   canvas.addEventListener("pointermove", (e) => {
+    if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && pts.size >= 2) {
+      // pinch: scale by finger spread, keep the pinched spot under the fingers (moving both pans)
+      const [a, b] = [...pts.values()];
+      const m = off((a.x + b.x) / 2, (a.y + b.y) / 2);
+      V.zoom = clamp(pinch.z0 * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, pinch.d0), 1, 4);
+      V.fx = pinch.wx - m.x / pxPerUnit(V.zoom); V.fy = pinch.wy - m.y / pxPerUnit(V.zoom);
+      return;
+    }
     if (!drag) return;
+    if (V.zoom > 1.05) {                                     // zoomed in: one finger pans around the page
+      const k = pxPerUnit(V.zoom);
+      if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 6) { drag.moved = true; drag.mode = "pan"; V.gesture = true; }
+      if (drag.mode === "pan") { V.fx = drag.fx0 - (e.clientX - drag.x0) / k; V.fy = drag.fy0 + (e.clientY - drag.y0) / k; }
+      return;
+    }
     const p = toLocal(e); if (!p) return;
     const sx = e.clientX - drag.x0, sy = e.clientY - drag.y0;
     if (!drag.moved && Math.hypot(sx, sy) > 8) {
@@ -472,7 +499,11 @@ function bindViewerInput() {
     }
   });
   const end = (e) => {
+    pts.delete(e.pointerId);
+    if (pinch) { if (pts.size < 2) pinch = null; if (!pts.size) { lock = false; V.gesture = false; if (V.zoom < 1.08) resetZoom(); } return; }
+    if (!pts.size) { lock = false; V.gesture = false; }
     if (!drag) return;
+    if (drag.mode === "pan") { drag = null; return; }
     const lf = drag.leaf;
     if (lf) {
       const h = drag.hist, vel = h.length > 1 ? (h.at(-1).p - h[0].p) / Math.max(0.016, (h.at(-1).t - h[0].t) / 1000) : 0;
@@ -483,7 +514,8 @@ function bindViewerInput() {
       if (lf.target !== before) { pageFlip(0.7); updateCount(); }
     } else if (!drag.moved) {
       const now = performance.now();
-      if (now - lastTap < 300) { toggleZoom(drag.start.x, drag.start.y); lastTap = 0; }
+      if (now - lastTap < 300) { V.zoom > 1.05 ? resetZoom() : zoomAt(off(drag.x0, drag.y0), 2.4); lastTap = 0; }
+      else if (V.zoom > 1.05) lastTap = now;               // zoomed in: a single tap doesn't flip pages
       else {
         lastTap = now;
         const side = drag.start.x;
@@ -493,6 +525,11 @@ function bindViewerInput() {
     drag = null;
   };
   canvas.addEventListener("pointerup", end);
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    zoomAt(off(e.clientX, e.clientY), V.zoom * Math.exp(-e.deltaY * 0.0016));
+    if (V.zoom < 1.02) resetZoom();
+  }, { passive: false });
   canvas.addEventListener("pointercancel", end);
 
   root.addEventListener("click", (e) => {
@@ -501,7 +538,7 @@ function bindViewerInput() {
     if (act === "next") flip(1);
     if (act === "prev") flip(-1);
     if (act === "close") closeViewer();
-    if (act === "zoom") toggleZoom(V.zoom ? 0 : V.W * 0.5, 0);
+    if (act === "zoom") V.zoom > 1.05 ? resetZoom() : zoomAt({ x: V.canvas.clientWidth * 0.18, y: 0 }, 2.2);
     if (act === "rotate") rotateBook(-1);
     if (act === "sound") { setMuted(!isMuted()); syncSoundBtn(); }
   });
@@ -515,9 +552,15 @@ function bindViewerInput() {
 }
 function syncSoundBtn() { $('[data-act="sound"]', V.root).classList.toggle("off", isMuted()); }
 
-function toggleZoom(x, y) {
-  if (V.zoom) { V.zoom = 0; return; }
-  V.zoom = 1; V.zoomX = clamp(x, -V.W * 0.6, V.W * 0.6); V.zoomY = clamp(y, -V.H * 0.3, V.H * 0.3);
+// ---- zoom: V.zoom is the scale (1 = whole spread), V.fx/fy the camera centre ----
+function resetZoom() { V.zoom = 1; V.fx = 0; V.fy = -0.04; }
+const pxPerUnit = (z) => V.canvas.clientHeight / (2 * V.tan * (V.fitD / z));
+// zoom to z keeping the point under screen offset m (px from canvas centre, y up) fixed
+function zoomAt(m, z) {
+  const z0 = V.zoom, c = { x: V.cam.x, y: V.cam.y };
+  const wx = c.x + m.x / pxPerUnit(z0), wy = c.y + m.y / pxPerUnit(z0);
+  V.zoom = clamp(z, 1, 4);
+  V.fx = wx - m.x / pxPerUnit(V.zoom); V.fy = wy - m.y / pxPerUnit(V.zoom);
 }
 
 /* ---- animation loop: spring physics per leaf ---- */
@@ -559,10 +602,14 @@ function viewerFrame(now) {
 
   // camera: fit or zoomed-in on a page (zoom point mapped through tilt + rotation)
   const k = 1 - Math.exp(-dt * 6);
-  const tz = V.zoom ? V.fitD * 0.48 : V.fitD;
-  const lx = V.zoomX + V.offsetX, ly = V.zoomY * Math.cos(V.book.rotation.x), cs = Math.cos(V.spin), sn = Math.sin(V.spin);
-  const tx = V.zoom ? lx * cs - ly * sn : 0, ty = V.zoom ? lx * sn + ly * cs : -0.04;
-  V.cam.d = lerp(V.cam.d, tz, k); V.cam.x = lerp(V.cam.x, tx, k); V.cam.y = lerp(V.cam.y, ty, k);
+  const tz = V.fitD / V.zoom;
+  // keep the view on the book: the further in, the further you can pan (none at 1×)
+  const cs = Math.abs(Math.cos(V.spin)), sn = Math.abs(Math.sin(V.spin)), free = 1 - 1 / V.zoom;
+  const rx = (cs * V.W + sn * V.H / 2) * 1.05 * free, ry = (sn * V.W + cs * V.H / 2) * 1.05 * free;
+  V.fx = clamp(V.fx, -rx, rx); V.fy = clamp(V.fy, -0.04 - ry, -0.04 + ry);
+  const tx = V.fx, ty = V.fy;
+  const kk = V.gesture ? 1 - Math.exp(-dt * 30) : k;            // follow fingers tightly, ease otherwise
+  V.cam.d = lerp(V.cam.d, tz, kk); V.cam.x = lerp(V.cam.x, tx, kk); V.cam.y = lerp(V.cam.y, ty, kk);
   V.camera.position.set(V.cam.x, V.cam.y, V.cam.d);
   V.camera.lookAt(V.cam.x, V.cam.y, 0);
 
@@ -586,7 +633,7 @@ export async function openViewer(b, startLeaf = 0) {
   $(".viewer__title span", V.root).textContent = [b.year, b.note].filter(Boolean).join(" · ");
   syncSoundBtn();
   const { leaves, P } = await buildBook(b);
-  V.leaves = leaves; V.P = P; V.zoom = 0; V.intro = reducedMotion ? 1 : 0;
+  V.leaves = leaves; V.P = P; V.zoom = 1; V.fx = 0; V.fy = -0.04; V.intro = reducedMotion ? 1 : 0;
   V.spin = V.spinTarget = 0;                      // each book opens upright
   fitViewer();
   V.cam = { x: 0, y: 0, d: V.fitD };
