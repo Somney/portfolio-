@@ -486,34 +486,64 @@ function ipClose() {
   ipod.classList.remove("open");
   ipMorph(false).then(() => { ipod.hidden = true; delete ipod.dataset.closing; $(".ipod-btn").classList.remove("is-away"); });
 }
-// One continuous move: the mini iPod in the corner lifts off, swoops in on a
-// curve and grows into the full menu (screen + wheel filling in on the way);
-// closing flies it back into the corner.
+// One continuous flight: the mini iPod lifts off the corner and glides in
+// toward you like a paper airplane — banking into a turn, swinging its nose
+// round, then flaring and settling flat. Every frame is sampled from smooth
+// curves that start and end at rest, and the last frame is the menu's exact
+// resting style, so nothing pops at either end. Closing flies it back.
 let ipAnims = [];
 function ipMorph(open) {
   const btn = $(".ipod-btn"), body = $(".ipod__body");
   ipAnims.forEach((a) => a.cancel()); ipAnims = [];
   if (reducedMotion || !body.animate) { btn.classList.toggle("is-away", open); return Promise.resolve(); }
+
   const a = btn.getBoundingClientRect(), b = body.getBoundingClientRect();
-  const sx = a.width / b.width, sy = a.height / b.height;
-  const dx = a.left + a.width / 2 - (b.left + b.width / 2), dy = a.top + a.height / 2 - (b.top + b.height / 2);
-  const radius = (s) => `${10 / s}px / ${10 / s * (sx / sy)}px`;
-  const frames = [
-    { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy}) rotate(0deg)`, borderRadius: radius(sx), boxShadow: "0 4px 14px rgba(0,0,0,.22)", offset: 0 },
-    // the swoop: drops down and out to the left of a straight line, tilting as it comes
-    { transform: `translate(${dx * 0.42 - 34}px, ${dy * 0.32 + 46}px) scale(${0.55 + sx * 0.45}, ${0.55 + sy * 0.45}) rotate(-9deg)`, offset: 0.5 },
-    { transform: "translate(0px, -6px) scale(1.02, 1.02) rotate(1.5deg)", offset: 0.82 },
-    { transform: "translate(0px, 0px) scale(1, 1) rotate(0deg)", borderRadius: "34px", boxShadow: "0 30px 60px rgba(0,0,0,.35)", offset: 1 },
-  ];
-  const opts = open ? { duration: 620, easing: "cubic-bezier(.3,.7,.25,1)", fill: "both" } : { duration: 440, easing: "cubic-bezier(.55,0,.75,.3)", fill: "both", direction: "reverse" };
-  btn.classList.add("is-away");                       // the mini one becomes the big one
+  const sx0 = a.width / b.width, sy0 = a.height / b.height;
+  const dx0 = a.left + a.width / 2 - (b.left + b.width / 2), dy0 = a.top + a.height / 2 - (b.top + b.height / 2);
+  const W = innerWidth, H = innerHeight;
+
+  // smooth helpers (zero speed at u = 0 and u = 1)
+  const ease = (u) => 0.5 - 0.5 * Math.cos(Math.PI * u);              // glide in / glide out
+  const hump = (u) => Math.sin(Math.PI * u) ** 2;                       // 0 → 1 → 0, flat at both ends
+  const L = (x, y, t) => x + (y - x) * t;
+  // flight path: cubic Bézier from the corner to the centre, swinging wide
+  // (pulled in on narrow screens so the whole glide stays on screen)
+  const narrow = W < 600;
+  const P0 = [dx0, dy0], P1 = [dx0 - W * (narrow ? 0.2 : 0.08), dy0 + H * 0.05], P2 = [-W * (narrow ? 0.09 : 0.32), H * (narrow ? 0.1 : 0.16)], P3 = [0, 0];
+  const bez = (t, i) => (1 - t) ** 3 * P0[i] + 3 * (1 - t) ** 2 * t * P1[i] + 3 * (1 - t) * t * t * P2[i] + t ** 3 * P3[i];
+
+  const N = 60, frames = [];
+  for (let k = 0; k <= N; k++) {
+    const u = k / N, t = ease(u), h = hump(u);
+    const x = bez(t, 0), y = bez(t, 1);
+    const grow = ease(Math.min(1, u * 1.15));                          // reaches full size just before landing
+    const pop = narrow ? 0.03 : 0.06;
+    const sx = L(sx0, 1, grow) + pop * h * u, sy = L(sy0, 1, grow) + pop * h * u;   // comes "at you", then settles
+    const bank = (narrow ? 11 : 26) * Math.sin(2 * Math.PI * u) * Math.sin(Math.PI * u);              // bank into the turn, then out
+    const yaw = (narrow ? 22 : 34) * h * (1.15 - u);                                                    // nose swings round to face you
+    const pitch = -16 * h * Math.cos(Math.PI * u * 1.3);                                // dips, then flares to land
+    const lift = 70 * h * (1 - u);                                                      // height above the page → shadow
+    const r = L(10, 34, grow);                                                          // corner radius in screen px
+    frames.push({
+      transform: `perspective(${narrow ? 1700 : 1100}px) translate(${x.toFixed(2)}px, ${y.toFixed(2)}px) rotateX(${pitch.toFixed(2)}deg) rotateY(${yaw.toFixed(2)}deg) rotateZ(${bank.toFixed(2)}deg) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`,
+      borderRadius: `${(r / sx).toFixed(2)}px / ${(r / sy).toFixed(2)}px`,
+      boxShadow: `0 ${(L(4, 30, grow) + lift * 0.5).toFixed(1)}px ${(L(14, 60, grow) + lift).toFixed(1)}px rgba(0,0,0,${(L(0.22, 0.35, grow) - 0.08 * h).toFixed(3)}), inset 0 0 0 1px rgba(0,0,0,.07), inset 0 -3px 8px rgba(0,0,0,.05)`,
+    });
+  }
+  // land exactly on the resting style so the hand-off to CSS is invisible
+  const rest = getComputedStyle(body);
+  frames[N].boxShadow = rest.boxShadow; frames[N].borderRadius = rest.borderRadius;
+
+  const opts = open ? { duration: 980, easing: "linear", fill: "both" }
+                    : { duration: 700, easing: "linear", fill: "both", direction: "reverse" };
+  btn.classList.add("is-away");                                        // the mini one *becomes* the big one
   const main = body.animate(frames, opts);
-  // screen + wheel details fade in late (out early when closing); the screen starts mini-blue
+  // details fade in during the last part of the flight (out first when closing)
+  const fade = [{ opacity: 0 }, { opacity: 0, offset: 0.5 }, { opacity: 1 }];
   const inner = $$(".ipod__bar, .ipod__list, .wheel__lbl, .wheel__center", body);
-  const fade = [{ opacity: 0, offset: 0 }, { opacity: 0, offset: 0.45 }, { opacity: 1, offset: 1 }];
   ipAnims = [main,
-    ...inner.map((n) => n.animate(fade, { ...opts })),
-    $(".ipod__screen", body).animate([{ backgroundColor: "#7fb2ff", offset: 0 }, { backgroundColor: "#7fb2ff", offset: 0.4 }, { backgroundColor: "#f4f8ff", offset: 1 }], { ...opts }),
+    ...inner.map((n) => n.animate(fade, { ...opts, easing: "ease-in-out" })),
+    $(".ipod__screen", body).animate([{ backgroundColor: "#7fb2ff" }, { backgroundColor: "#7fb2ff", offset: 0.45 }, { backgroundColor: "#f4f8ff" }], { ...opts, easing: "ease-in-out" }),
   ];
   return main.finished.then(() => { if (open) ipAnims.forEach((x) => x.cancel()); }).catch(() => {});
 }
