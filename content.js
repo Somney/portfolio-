@@ -150,8 +150,18 @@ export default {
       size: [5.25, 8.25], note: "Sep – Oct 2026" },
     // Started Nov 2023. Page photos were taken recently, so their dates can't be used
     // for ordering — pages are numbered by hand (page-01, page-02, … in the order sent).
-    { id: "book-02", title: "Sketchbook 02", year: 2023, color: "#ff8a00", folder: "assets/sketchbooks/book-02", pages: 21,
-      size: [8.25, 10], note: "Started Nov 2023" },
+    { id: "book-02", title: "Sketchbook 02", year: 2023, color: "#ff8a00", folder: "assets/sketchbooks/book-02", pages: 23,
+      size: [8.25, 10], note: "Started Nov 2023",
+      // Sticky notes you can lift: page number → the photo with the notes lifted,
+      // plus one outline per note ([x, y] corners, 0–1 across / down the page).
+      // Tapping a note peels it up to show that spot of the "lift" photo.
+      layers: {
+        23: { lift: "page-23-lift.jpg", notes: [
+          [[0, 0], [0.335, 0], [0.335, 0.405], [0, 0.405]],                   // pink note
+          [[0.52, 0.165], [0.70, 0.015], [0.91, 0.19], [0.76, 0.41]],         // diamond note
+          [[0.62, 0.455], [0.97, 0.455], [0.97, 0.735], [0.62, 0.735]],       // green note
+        ] },
+      } },
   ],
 
   /* ---------- Extras ----------

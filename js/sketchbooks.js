@@ -496,7 +496,20 @@ async function buildBook(b) {
   V.refW = W + (Math.max(...big.map((d) => d.w)) - W) * 0.6;
   V.refH = H + (Math.max(...big.map((d) => d.h)) - H) * 0.6;
 
-  const pageTex = (k) => loadTex(paths.pages[k], () => placeholderCanvas("page", b.id + k, `p. ${k + 1}`, b.color, 640, Math.round(640 * aspect)));
+  const plainTex = (k) => loadTex(paths.pages[k], () => placeholderCanvas("page", b.id + k, `p. ${k + 1}`, b.color, 640, Math.round(640 * aspect)));
+  V.layers = [];
+  // a page with lift-able sticky notes is drawn on a canvas (base photo + peeled spots)
+  const pageTex = (k, leafIdx, side) => {
+    const cfg = b.layers?.[k + 1];
+    if (!cfg?.lift || !cfg.notes?.length) return plainTex(k);
+    const folder = (b.folder || "").replace(/\/$/, "");
+    const liftUrl = cfg.lift.includes("/") ? cfg.lift : `${folder}/${cfg.lift}`;
+    return Promise.all([loadImage(paths.pages[k]), loadImage(liftUrl)]).then(([bt, lt]) => {
+      const L = makeLayer(bt.image, lt.image, cfg.notes, leafIdx, side);
+      V.layers.push(L);
+      return L.tex;
+    }).catch(() => plainTex(k));
+  };
   const paperCanvas = () => { const c = document.createElement("canvas"); c.width = 64; c.height = 88; const g = c.getContext("2d"); g.fillStyle = "#f3efe4"; g.fillRect(0, 0, 64, 88); return c; };
   const backCover = await loadTex(paths.back, () => placeholderCanvas("cover", b.id + "back", "", b.color, 512, Math.round(512 * aspect)));
 
@@ -510,8 +523,8 @@ async function buildBook(b) {
     const leaf = makeLeaf(W, H, prep(new THREE.CanvasTexture(paperCanvas())), prep(new THREE.CanvasTexture(paperCanvas())), false);
     leaves.push(leaf);
     const fi = 2 * k, bi = 2 * k + 1;
-    pageTex(fi).then((t) => { leaf.front.material.map.dispose(); leaf.front.material.map = t; leaf.front.material.needsUpdate = true; });
-    (bi < P ? pageTex(bi) : Promise.resolve(prep(new THREE.CanvasTexture(paperCanvas())))).then((t) => {
+    pageTex(fi, k + 1, "front").then((t) => { leaf.front.material.map.dispose(); leaf.front.material.map = t; leaf.front.material.needsUpdate = true; });
+    (bi < P ? pageTex(bi, k + 1, "back") : Promise.resolve(prep(new THREE.CanvasTexture(paperCanvas())))).then((t) => {
       t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1;
       leaf.back.material.map.dispose(); leaf.back.material.map = t; leaf.back.material.needsUpdate = true;
     });
@@ -530,8 +543,128 @@ function disposeBook() {
     lf.geo.dispose();
     for (const m of [lf.front.material, lf.back.material]) { m.map?.dispose(); m.dispose(); }
   }
-  V.leaves = [];
+  V.leaves = []; V.layers = [];
 }
+
+/* ---- sticky notes: a layered page peels notes up to show the photo underneath ---- */
+function makeLayer(base, lift, notes, leafIdx, side) {
+  const c = document.createElement("canvas");
+  c.width = base.width; c.height = base.height;
+  const g = c.getContext("2d");
+  // each note's colour (for its curled underside), sampled from the base photo
+  const sc = document.createElement("canvas"); sc.width = sc.height = 1;
+  const sg = sc.getContext("2d", { willReadFrequently: true });
+  const N = notes.map((poly) => {
+    const pts = poly.map(([x, y]) => [x * c.width, y * c.height]);
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    const box = { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+    const cx = xs.reduce((a, v) => a + v, 0) / xs.length, cy = ys.reduce((a, v) => a + v, 0) / ys.length;   // middle of the note
+    sg.drawImage(base, cx - 4, cy + (box.y1 - cy) * 0.5, 8, 8, 0, 0, 1, 1);
+    const [r, gg, bb] = sg.getImageData(0, 0, 1, 1).data;
+    return { poly, pts, box, col: `rgb(${Math.min(255, r + 18)},${Math.min(255, gg + 18)},${Math.min(255, bb + 18)})`, p: 0, target: 0, user: false };
+  });
+  const tex = prep(new THREE.CanvasTexture(c));
+  const L = { c, g, base, lift, notes: N, tex, leafIdx, side, peeked: false };
+  drawLayer(L);
+  return L;
+}
+function drawLayer(L) {
+  const { g, c, base, lift } = L;
+  g.drawImage(base, 0, 0, c.width, c.height);
+  const path = (pts) => { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); };
+  for (const n of L.notes) {
+    const e = easeInOut(n.p);
+    if (e < 0.002) continue;
+    const { box, pts } = n, h = box.y1 - box.y0, w = box.x1 - box.x0;
+    // the note lifts from its bottom edge upward: below the fold you see what's underneath
+    const fold = box.y1 - e * h * 1.12;
+    const curl = Math.min(h * 0.16, c.height * 0.035) * Math.sin(Math.min(1, e) * Math.PI);
+    g.save();
+    path(pts); g.clip();
+    g.beginPath(); g.rect(0, fold, c.width, c.height); g.clip();
+    g.drawImage(lift, 0, 0, c.width, c.height);
+    const sh = g.createLinearGradient(0, fold, 0, fold + curl * 2.2 + 4);    // soft shadow under the lifted edge
+    sh.addColorStop(0, "rgba(0,0,0,.35)"); sh.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = sh; g.fillRect(box.x0 - 4, fold, w + 8, curl * 2.2 + 4);
+    g.restore();
+    if (curl > 0.5) {
+      // the curled-up underside of the note, just above the fold
+      g.save();
+      path(pts); g.clip();
+      const cg = g.createLinearGradient(0, fold - curl, 0, fold);
+      cg.addColorStop(0, n.col); cg.addColorStop(0.7, n.col); cg.addColorStop(1, "rgba(0,0,0,.25)");
+      g.fillStyle = cg; g.fillRect(box.x0 - 4, fold - curl, w + 8, curl);
+      g.restore();
+    }
+  }
+  L.tex.needsUpdate = true;
+}
+function stepLayers(dt) {
+  for (const L of V.layers) {
+    let dirty = false;
+    for (const n of L.notes) {
+      if (n.p === n.target) continue;
+      const sp = dt / (n.user ? 0.5 : 0.3);
+      n.p = n.target > n.p ? Math.min(n.target, n.p + sp) : Math.max(n.target, n.p - sp);
+      dirty = true;
+    }
+    if (dirty) drawLayer(L);
+    // first time the page lies open: each note gives a little lift so people know they can
+    if (!L.peeked && layerOnShow(L)) {
+      L.peeked = true;
+      showHint("tap the sticky notes to lift them");
+      if (!reducedMotion) L.notes.forEach((n, i) => {
+        setTimeout(() => { if (!n.user && V.layers.includes(L)) n.target = 0.22; }, 500 + i * 220);
+        setTimeout(() => { if (!n.user && V.layers.includes(L)) n.target = 0; }, 500 + i * 220 + 420);
+      });
+    }
+  }
+}
+// is this page lying open and still (not mid-turn)?
+function layerOnShow(L) {
+  const lf = V.leaves[L.leafIdx];
+  if (!lf) return false;
+  if (L.side === "front") return lf.p < 0.01 && lf.target === 0 && (V.leaves[L.leafIdx - 1]?.p ?? 1) > 0.99;
+  return lf.p > 0.99 && lf.target === 1 && (V.leaves[L.leafIdx + 1]?.p ?? 0) < 0.01;
+}
+// the sticky note under a screen point, if any
+const noteRay = new THREE.Raycaster(), noteNdc = new THREE.Vector2();
+function noteAt(x, y) {
+  if (!V.layers.length) return null;
+  const r = V.canvas.getBoundingClientRect();
+  noteNdc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+  noteRay.setFromCamera(noteNdc, V.camera);
+  const hit = noteRay.intersectObjects(V.leaves.flatMap((l) => [l.front, l.back]), false)[0];
+  if (!hit?.uv) return null;
+  for (const L of V.layers) {
+    const lf = V.leaves[L.leafIdx];
+    if (hit.object !== (L.side === "front" ? lf.front : lf.back) || !layerOnShow(L)) continue;
+    const px = L.side === "front" ? hit.uv.x : 1 - hit.uv.x, py = 1 - hit.uv.y;
+    const n = L.notes.find((n) => inPoly(px, py, n.poly));
+    if (n) return n;
+  }
+  return null;
+}
+function inPoly(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function toggleNote(n) {
+  n.user = true;
+  n.target = n.target >= 1 ? 0 : 1;
+  pageFlip(0.35);
+}
+function showHint(text) {
+  const h = $(".viewer__hint", V.root);
+  if (!h) return;
+  h.textContent = text;
+  h.style.animation = "none"; void h.offsetWidth; h.style.animation = "";
+}
+
 
 function fitViewer() {
   const r = V.canvas.getBoundingClientRect();
@@ -588,7 +721,7 @@ function flip(dir) {
 function bindViewerInput() {
   const { canvas, root } = V;
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), local = new THREE.Vector3();
-  let drag = null, lastTap = 0, pinch = null, lock = false;
+  let drag = null, lastTap = 0, pinch = null, lock = false, noteTimer = 0;
   const pts = new Map();
   const off = (x, y) => { const r = canvas.getBoundingClientRect(); return { x: x - r.left - r.width / 2, y: -(y - r.top - r.height / 2) }; };
   const releaseLeaf = () => { const lf = drag?.leaf; if (lf) { lf.dragging = false; lf.v = 0; } };
@@ -618,6 +751,7 @@ function bindViewerInput() {
     drag = { x0: e.clientX, y0: e.clientY, start: p, leaf: null, moved: false, mode: null, hist: [], tilt0: V.tilt, fx0: V.fx, fy0: V.fy };
   });
   canvas.addEventListener("pointermove", (e) => {
+    if (!pts.size && e.pointerType === "mouse" && V.layers.length) canvas.style.cursor = noteAt(e.clientX, e.clientY) ? "pointer" : "";
     if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pinch && pts.size >= 2) {
       // pinch: scale by finger spread, keep the pinched spot under the fingers (moving both pans)
@@ -680,7 +814,9 @@ function bindViewerInput() {
       if (lf.target !== before) { pageFlip(0.7); updateCount(); }
     } else if (!drag.moved) {
       const now = performance.now();
-      if (now - lastTap < 300) { V.zoom > 1.05 ? resetZoom() : zoomAt(off(drag.x0, drag.y0), 2.4); lastTap = 0; }
+      const note = noteAt(drag.x0, drag.y0);
+      if (now - lastTap < 300) { clearTimeout(noteTimer); V.zoom > 1.05 ? resetZoom() : zoomAt(off(drag.x0, drag.y0), 2.4); lastTap = 0; }
+      else if (note) { lastTap = now; noteTimer = setTimeout(() => toggleNote(note), 220); }   // lift / lay down a sticky note (a double-tap zooms instead)
       else if (V.zoom > 1.05) lastTap = now;               // zoomed in: a single tap doesn't flip pages
       else {
         lastTap = now;
@@ -756,6 +892,7 @@ function viewerFrame(now) {
     lf.curl = nc;
     if (lf.dirty) bendLeaf(lf, i, L);
   }
+  stepLayers(dt);
   // keep the visible part of the book centred (closed front / open / closed back)
   const pFirst = V.leaves[0].p, pLast = V.leaves[L - 1].p;
   V.offsetX = (-V.W / 2) * (1 - pFirst) + (V.W / 2) * pLast;
