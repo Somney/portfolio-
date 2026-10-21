@@ -13,7 +13,7 @@ import { reducedMotion } from "./util.js";
 /* ---------------- sprite space (low-res pixels, y up from the floor) -------- */
 const LW = 160, LH = 150, FLOOR = 144;          // canvas size + floor line (screen y)
 const BPM = 112;
-const L = { thigh: 21.5, shin: 21, ankle: 3, spine: 29, chest: 18, neck: 13.5, upper: 15, fore: 14, head: 10.5 };
+const L = { thigh: 21.5, shin: 21, ankle: 3, spine: 29, chest: 18, neck: 13.5, upper: 19.5, fore: 18.5,   /* human proportions: fingertips reach mid-thigh */ head: 10.5 };
 
 /* ---------------- tiny math kit ---------------- */
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -26,17 +26,29 @@ const V = (x, y) => ({ x, y });
 const add = (a, b) => V(a.x + b.x, a.y + b.y);
 const rot = (len, ang) => V(Math.sin(ang) * len, Math.cos(ang) * len);             // ang 0 = straight up
 
-function ik(a, t, l1, l2, pick) {
+// Two-bone IK. `pole` is the fixed bend side (+1 / -1).
+function ik(a, t, l1, l2, pole, mem, key, minFrac = 0, softFrac = 0.04) {
   const dx = t.x - a.x, dy = t.y - a.y;
-  const d = clamp(Math.hypot(dx, dy), Math.abs(l1 - l2) + 0.01, l1 + l2 - 0.01);
-  const base = Math.atan2(dy, dx), A = Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
-  const j1 = V(a.x + Math.cos(base + A) * l1, a.y + Math.sin(base + A) * l1);
-  const j2 = V(a.x + Math.cos(base - A) * l1, a.y + Math.sin(base - A) * l1);
-  const end = V(a.x + Math.cos(base) * d, a.y + Math.sin(base) * d);
-  return { joint: pick(j1, j2), end };
+  // minFrac keeps the target out of the fully-folded dead spot where the joint can spin
+  const raw = Math.hypot(dx, dy), dMin = Math.max(Math.abs(l1 - l2) + 0.01, minFrac * (l1 + l2));
+  // "soft reach": ease into full extension instead of snapping straight
+  const reach = l1 + l2, soft = softFrac * reach;
+  const d = clamp(raw > reach - soft ? reach - soft * Math.exp(-(raw - (reach - soft)) / soft) : raw, dMin, reach - 0.01);
+  let base = Math.atan2(dy, dx);
+  // near the shoulder the direction is unstable (a target passing through
+  // it would flip the arm 180°) — hold the previous direction instead
+  const pd = mem && mem[key + "dir"];
+  if (pd != null && raw < dMin * 1.6) {
+    let delta = base - pd; delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+    base = pd + delta * clamp((raw - dMin * 0.4) / (dMin * 1.2), 0, 1) * 0.35;
+  }
+  if (mem) mem[key + "dir"] = base;
+  const A = Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1));
+  // joints bend one way only, like real elbows and knees — so they can never flip
+  const joint = V(a.x + Math.cos(base + pole * A) * l1, a.y + Math.sin(base + pole * A) * l1);
+  return { joint, end: V(a.x + Math.cos(base) * d, a.y + Math.sin(base) * d) };
 }
-const kneeFwd = (p, q) => (p.x > q.x ? p : q);
-const elbowDown = (p, q) => (p.y < q.y ? p : q);
+const POLE = { knee: 1, freeElbow: -1, podElbow: -1 };   // knees bend forward, elbows fold the other way
 
 /* ---------------- poses ----------------
    rootX  world slide (moonwalk)      hip   pelvis (local)
@@ -63,10 +75,11 @@ const MOVES = [
     if (side > 0) { lead = V(lerp(-TAP, OUT, leadE), 3 + 5 * arc(f / 0.5)); trail = V(lerp(-OUT, TAP, trailE), 3 + 4 * arc((f - 0.28) / 0.52)); }
     else { lead = V(lerp(TAP, -OUT, leadE), 3 + 5 * arc(f / 0.5)); trail = V(lerp(OUT, -TAP, trailE), 3 + 4 * arc((f - 0.28) / 0.52)); }
     const fN = side > 0 ? lead : trail, fF = side > 0 ? trail : lead;  // near = right foot
-    const d = dip(f), hipX = (fN.x + fF.x) / 2 + side * 2 * leadE;
-    return { ...BASE, hip: V(hipX, 44 - 3.2 * d), lean: 0.08 + 0.05 * d, roll: 1.5 * d, nod: 0.22 * d, tilt: -0.06 * side,
-      fN, fF, tN: side > 0 ? 0 : 0.5 * trailE, tF: side > 0 ? 0.5 * trailE : 0,
-      hand: V(hipX + 7 + 5 * (1 - d), 92 + 20 * d), pod: V(8, -3 + 1.5 * d) };
+    const d = dip(f), sway = side * (2 * leadE - 1);                 // −1…+1, continuous across beats
+    const hipX = (fN.x + fF.x) / 2 + 2 * sway;
+    return { ...BASE, hip: V(hipX, 44 - 3.2 * d), lean: 0.08 + 0.05 * d, roll: 1.5 * d, nod: 0.22 * d, tilt: -0.06 * sway,
+      fN, fF, tN: side > 0 ? 0.5 * (1 - leadE) : 0.5 * trailE, tF: side > 0 ? 0.5 * trailE : 0.5 * (1 - leadE),   // heel rises on the tap, lowers as it steps
+      hand: V(hipX + 24 + 5 * (1 - d), 100 + 28 * d), pod: V(8, -3 + 1.5 * d) };     // fist pump up and out, clear of the face
   } },
   { name: "running man", beats: 8, pose(u) {
     const k = Math.floor(u), f = u - k, e = ss(f);
@@ -77,20 +90,19 @@ const MOVES = [
     return { ...BASE, hip: V(-1, 44 - 3 * dip(f) + 1.5 * arc(f)), lean: 0.14, roll: 1, nod: 0.18 * dip(f),
       fN: nearSlides ? slider : lifter, fF: nearSlides ? lifter : slider,
       tN: nearSlides ? 0 : 0.7 * arc(f), tF: nearSlides ? 0.7 * arc(f) : 0,
-      hand: V(3 + 11 * swing, 64 + 6 * Math.abs(swing)), pod: V(9, -2 + 1.5 * dip(f)) };
+      hand: V(-2 + 17 * swing, 52 + 9 * Math.abs(swing)), pod: V(9, -2 + 1.5 * dip(f)) };   // big bent-arm swing: behind the back ↔ out front
   } },
   { name: "body roll", beats: 4, pose(u) {
     const w = Math.PI * u, f = u % 1;                                  // one roll per 2 beats
-    const a = 1.75 + 1.0 * Math.sin(w * 0.5);                          // slow arc of the free arm
     const hx = 2 * Math.sin(w);
     return { ...BASE, hip: V(hx, 41 - 2.5 * Math.sin(w)), lean: 0.14 * Math.sin(w + 1.2), roll: 3.5 * Math.sin(w + 2.1),
       nod: 0.24 * dip((u * 2) % 1), tilt: 0.12 * Math.sin(w), fN: V(11, 3), fF: V(-11, 3),
-      hand: V(hx + 29 * Math.cos(a), 72 + 27 * Math.sin(a)), pod: V(8, -3) };
+      hand: V(hx + 20 + 5 * Math.sin(w), 78 + 11 * Math.sin(w * 0.5 + 0.6)), pod: V(8, -3) };   // smooth wave out in front
   } },
   { name: "spin → disco point", beats: 4, pose(u) {
     const f = u % 1, spin = win(u, 0.2, 1.2);
     const tuck = { ...BASE, hip: V(0, 47 - 2 * arc(spin)), lean: 0, fN: V(3, 3), fF: V(-3, 3), tN: 0.45 * arc(spin), tF: 0.45 * arc(spin),
-      hand: V(5, 76), pod: V(7, -2), nod: -0.05, turn: spin < 1 ? spin * Math.PI * 2 : 0 };
+      hand: V(-10, 80), pod: V(7, -2), nod: -0.05, turn: spin < 1 ? spin * Math.PI * 2 : 0 };
     const d = dip(f);
     const point = { ...BASE, hip: V(3 + 1.5 * d, 44 - 2 * d), lean: -0.1, roll: -1, nod: -0.05 * d, tilt: -0.25,
       fN: V(10, 3), fF: V(-9, 3), tN: 0.55, tF: 0,
@@ -108,11 +120,11 @@ const MOVES = [
     return { ...BASE, rootX, hip: V(0, 43 - 1.5 * dip(f)), lean: -0.04, roll: 0.5 * dip(f), nod: 0.15 * dip(f),
       fN: nearSlides ? slider : toe, fF: nearSlides ? toe : slider,
       tN: nearSlides ? lift * (1 - pop) : lift * pop, tF: nearSlides ? lift * pop : lift * (1 - pop),
-      hand: V(-4 + 3 * Math.sin(Math.PI * uu), 60), pod: V(8, -2), turn };
+      hand: V(-15 + 3 * Math.sin(Math.PI * uu), 58 + 2 * Math.cos(Math.PI * uu)), pod: V(8, -2), turn };   // loose arm swinging behind
   } },
 ];
 const CYCLE = MOVES.reduce((n, m) => n + m.beats, 0);
-const BLEND = 0.6; // beats of cross-fade between moves
+const BLEND = 0.9; // beats of cross-fade between moves
 
 function choreo(beat) {
   let u = ((beat % CYCLE) + CYCLE) % CYCLE, i = 0;
@@ -128,7 +140,7 @@ function choreo(beat) {
 }
 
 /* ---------------- drawing the figure into the low-res buffer ---------------- */
-function rigPoints(P) {
+function rigPoints(P, mem = null) {
   const hip = P.hip;
   const chest = add(add(hip, rot(L.chest, P.lean)), V(P.roll, 0));
   const neck = add(add(hip, rot(L.spine, P.lean)), V(P.roll * 0.6, 0));
@@ -137,10 +149,23 @@ function rigPoints(P) {
   const shN = add(neck, V(2, -4.5)), shF = add(neck, V(-3, -3.5));
   const hpN = add(hip, V(2, -1)), hpF = add(hip, V(-2.5, -1));
   const ankN = V(P.fN.x, P.fN.y + Math.sin(P.tN) * 9), ankF = V(P.fF.x, P.fF.y + Math.sin(P.tF) * 9);
-  const legN = ik(hpN, ankN, L.thigh, L.shin, kneeFwd), legF = ik(hpF, ankF, L.thigh, L.shin, kneeFwd);
+  const legN = ik(hpN, ankN, L.thigh, L.shin, POLE.knee, mem, "kN"), legF = ik(hpF, ankF, L.thigh, L.shin, POLE.knee, mem, "kF");
   // the iPod is held out in front at belly height: elbow at the side, forearm forward
   const podHand = add(chest, V(P.pod.x + 6, P.pod.y - 6));
-  const armN = ik(shN, podHand, L.upper, L.fore, elbowDown), armF = ik(shF, P.hand, L.upper, L.fore, elbowDown);
+  // The free hand follows its target as a swing around the shoulder
+  // (angle + reach), never a straight line through it — arms arc like real
+  // arms, and the slight trail adds follow-through.
+  let hand = P.hand;
+  if (mem) {
+    const k = 1 - Math.exp(-(P.dt || 1 / 60) * 14);
+    const tx = P.hand.x - shF.x, ty = P.hand.y - shF.y;
+    const ta = Math.atan2(ty, tx), tr = Math.max(Math.hypot(tx, ty), 0.5 * (L.upper + L.fore));
+    if (mem.ha == null) { mem.ha = ta; mem.hr = tr; }
+    let da = ta - mem.ha; da = Math.atan2(Math.sin(da), Math.cos(da));
+    mem.ha += da * k; mem.hr += (tr - mem.hr) * k;
+    hand = V(shF.x + Math.cos(mem.ha) * mem.hr, shF.y + Math.sin(mem.ha) * mem.hr);
+  }
+  const armN = ik(shN, podHand, L.upper, L.fore, POLE.podElbow, mem, "eN", 0.4, 0.15), armF = ik(shF, hand, L.upper, L.fore, POLE.freeElbow, mem, "eF", 0.45, 0.15);
   return { hip, chest, neck, head, headAng: headAng + P.nod, shN, shF, hpN, hpF, legN, legF, armN, armF, podHand };
 }
 
@@ -353,4 +378,4 @@ export function startDancer(canvas, { ink = "#0d0d0d", image = null } = {}) {
 }
 
 // exposed for previews/tests
-export const _debug = { choreo, MOVES, LW, LH };
+export const _debug = { choreo, MOVES, LW, LH, rigPoints };
