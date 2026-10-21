@@ -361,6 +361,24 @@ button.x-card:hover, a.x-card:hover { rotate: 0deg; translate: -4px -6px; box-sh
 @keyframes eq { 0%, 100% { height: 4px; } 50% { height: 16px; } }
 @media (max-width: 520px) { .np__txt { display: none; } .np__pill { padding-right: 6px; } }
 
+/* ---------- glitch layer + CRT texture ---------- */
+.glitch-layer { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 45; image-rendering: pixelated; }
+body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 44;
+  background: repeating-linear-gradient(to bottom, rgba(0,0,0,.06) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+}
+.sec-title, .hero__name, .contact__big { position: relative; }
+.glitching { animation: gl-shake .12s steps(2) infinite; }
+.glitching::before, .glitching::after {
+  content: attr(data-text); position: absolute; inset: 0; pointer-events: none;
+}
+.glitching::before { color: var(--c1); transform: translate(-3px, 1px); clip-path: inset(10% 0 55% 0); animation: gl-slice .18s steps(3) infinite; }
+.glitching::after { color: var(--c2); transform: translate(3px, -1px); clip-path: inset(60% 0 8% 0); animation: gl-slice .22s steps(3) infinite reverse; }
+@keyframes gl-slice { 0% { clip-path: inset(10% 0 60% 0); } 33% { clip-path: inset(45% 0 30% 0); } 66% { clip-path: inset(75% 0 5% 0); } 100% { clip-path: inset(20% 0 50% 0); } }
+@keyframes gl-shake { 0% { translate: 0 0; } 50% { translate: 2px -1px; } 100% { translate: -2px 1px; } }
+@media (prefers-reduced-motion: reduce) { .glitching, .glitching::before, .glitching::after { animation: none; } body::after { display: none; } }
+
 /* ---------- full-screen splash ---------- */
 .splash-overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 100; pointer-events: none; display: none; }
 

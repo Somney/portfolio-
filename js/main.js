@@ -4,6 +4,7 @@ import { SplashBG, splashTransition } from "./splash.js";
 import { startDancer } from "./dancer.js";
 import { blip } from "./sound.js";
 import { initMusic } from "./music.js";
+import { initGlitch } from "./glitch.js";
 import { sortPosts } from "./social-sort.js";
 
 const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [], social = {} } = content;
@@ -53,6 +54,8 @@ for (const s of artist.socials || []) {
   const a = el("a", "chip", esc(s.label)); a.href = s.url; a.target = "_blank"; a.rel = "noopener";
   $(".contact__socials").append(a);
 }
+
+let glitch = { burst() {} };   // set up at the end, once the page is built
 
 /* ---------- Background music (YouTube, starts on first tap) ---------- */
 const music = initMusic(content.music);
@@ -214,6 +217,7 @@ function paintSeriesText() {
 function switchSeries(i, e) {
   if (i === series) return;
   const r = pSec.getBoundingClientRect();
+  glitch.burst(1.6);
   pBG.to(paintings[i].color, e ? e.clientX - r.left : r.width / 2, e ? e.clientY - r.top : r.height / 2, 850);
   stage.classList.add("out");
   setTimeout(() => {
@@ -437,6 +441,7 @@ function goTo(id, x, y) {
   const target = document.getElementById(id);
   if (!s || !target) return;
   history.replaceState(null, "", "#" + id);
+  glitch.burst(2.2);
   splashTransition({ color: s.color(), ink: s.ink ? s.ink() : INK, x, y, onCovered: () => target.scrollIntoView({ behavior: "instant" }) });
 }
 document.addEventListener("click", (e) => {
@@ -509,3 +514,9 @@ $$(".sec-title, .series-info, .sec-sub, .contact__big, .reveal").forEach((n) => 
 /* ---------- Deep links: #sketchbook/<id> opens that book ---------- */
 const m = location.hash.match(/^#sketchbook\/([\w-]+)(?:\/(\d+))?/);
 if (m) { document.getElementById("sketchbooks").scrollIntoView(); openBook(m[1], +m[2] || 0); }
+
+/* ---------- Glitch overlay: bitmap collage from free stock + your own art ---------- */
+glitch = initGlitch(content.glitch, {
+  palette: PAL, ink: INK,
+  local: [...new Set(buckets.flatMap((b) => b.posts).map((p) => p.art || p.image).filter(Boolean))],
+});

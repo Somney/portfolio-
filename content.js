@@ -70,6 +70,20 @@ export default {
     title: "",
   },
 
+  /* ---------- Glitch overlay ----------
+     Short bitmap-collage glitch bursts over the page, built from fresh
+     public-domain art (Art Institute of Chicago), random free photos
+     (Lorem Picsum) and your own TikTok artwork, crushed into two-tone
+     dithered "plates" in your palette. A few pieces linger at the edges.
+     enabled: false turns it off · intensity: 0.5 calmer … 2 wild
+     stock: false = only use your own art · refreshSeconds: new image rate */
+  glitch: {
+    enabled: true,
+    intensity: 1,
+    stock: true,
+    refreshSeconds: 20,
+  },
+
   /* ---------- Look & feel ----------
      palette: the neon colours the hero cycles through (iPod-ad style).
      ink:     the "silhouette" colour used for all the two-tone shapes.
