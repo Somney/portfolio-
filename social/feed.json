@@ -2126,7 +2126,8 @@
       "date": "2023-04-06T21:35:16.000Z",
       "image": "assets/social/instagram/18059815567361864.jpg",
       "video": false,
-      "tags": []
+      "tags": [],
+      "hidden": true
     },
     {
       "platform": "instagram",
@@ -2192,7 +2193,8 @@
       "date": "2023-02-27T00:48:23.000Z",
       "image": "assets/social/instagram/17943281123564927.jpg",
       "video": false,
-      "tags": []
+      "tags": [],
+      "hidden": true
     },
     {
       "platform": "instagram",
