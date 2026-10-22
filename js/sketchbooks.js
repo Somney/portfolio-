@@ -585,6 +585,13 @@ async function buildBook(b) {
     m.castShadow = true; m.receiveShadow = true; m.visible = false; V.book.add(m); return m;
   });
 
+  if (b.insideFront) {
+    const url = b.insideFront.includes("/") ? b.insideFront : `${(b.folder || "").replace(/\/$/, "")}/${b.insideFront}`;
+    loadImage(url).then((t) => {
+      prep(t); t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1;
+      const m = leaves[0].back.material; m.map?.dispose(); m.map = t; m.needsUpdate = true;
+    }).catch(() => {});
+  }
   const L = leaves.length;
   leaves.forEach((lf, i) => { V.book.add(lf.group); bendLeaf(lf, i, L); });
   return { leaves, P };

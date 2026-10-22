@@ -350,6 +350,7 @@ new IntersectionObserver((es) => es[0].isIntersecting && loadShelf(), { rootMarg
 async function openBook(id, page = 0) {
   const book = sketchbooks.find((b) => b.id === id);
   if (!book) return;
+  if (book.nsfw && !(await ageGate(book))) { if (location.hash.startsWith("#sketchbook/")) history.replaceState(null, "", "#sketchbooks"); return; }
   const mod = await loadShelf();
   if (!mod) return;
   const shelf = mod.getShelf?.();
@@ -360,6 +361,49 @@ async function openBook(id, page = 0) {
     return;
   }
   await splashTransition({ color: book.color, ink: INK, onCovered: () => mod.openViewer(book, page) });
+}
+
+/* ---------- NSFW books: a quick "what year were you born?" ---------- */
+const AGE_KEY = "fbs-18plus";
+function ageGate(book) {
+  try { if (localStorage.getItem(AGE_KEY) === "1") return Promise.resolve(true); } catch {}
+  return new Promise((resolve) => {
+    const now = new Date().getFullYear();
+    const box = el("div", "agegate", `
+      <form class="agegate__card" style="--book:${esc(book.color)}">
+        <p class="agegate__tag">⚠ NSFW</p>
+        <h3 class="agegate__title">${esc(book.title)} has adult art in it</h3>
+        <label class="agegate__q" for="agegate-year">What year were you born?</label>
+        <input id="agegate-year" class="agegate__in" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="YYYY" autocomplete="bday-year" />
+        <p class="agegate__msg" aria-live="polite"></p>
+        <div class="agegate__btns">
+          <button type="button" class="agegate__no">nope, back</button>
+          <button type="submit" class="agegate__yes">open it</button>
+        </div>
+      </form>`);
+    document.body.append(box);
+    const input = $(".agegate__in", box), msg = $(".agegate__msg", box);
+    requestAnimationFrame(() => { box.classList.add("is-in"); input.focus(); });
+    const done = (ok) => {
+      box.classList.remove("is-in");
+      setTimeout(() => box.remove(), 250);
+      removeEventListener("keydown", esc_);
+      resolve(ok);
+    };
+    const esc_ = (e) => { if (e.key === "Escape") done(false); };
+    addEventListener("keydown", esc_);
+    input.addEventListener("input", () => { input.value = input.value.replace(/\D/g, "").slice(0, 4); msg.textContent = ""; });
+    $(".agegate__no", box).onclick = () => done(false);
+    box.addEventListener("click", (e) => { if (e.target === box) done(false); });
+    $("form", box).onsubmit = (e) => {
+      e.preventDefault();
+      const y = +input.value;
+      if (input.value.length !== 4 || y < now - 120 || y > now) { msg.textContent = "four digits, like 1999"; return; }
+      if (now - y < 18) { msg.textContent = "come back in a few years ✌"; input.value = ""; return; }
+      try { localStorage.setItem(AGE_KEY, "1"); } catch {}
+      done(true);
+    };
+  });
 }
 
 /* ---------- Extras ---------- */
