@@ -578,20 +578,28 @@ async function buildBook(b) {
   addSlab(leaves[leaves.length - 1], tb + rest, rest > tb);
   // where each leaf rests: on top of the thickness of everything under it, per side
   const ts = leaves.map((l) => l.t);
-  V.stack = { below: ts.map((_, i) => ts.slice(i + 1).reduce((a, v) => a + v, 0)), above: ts.map((_, i) => ts.slice(0, i).reduce((a, v) => a + v, 0)) };
+  // (plus a hair of air between sheets so neighbouring faces never sit at the same depth and flicker)
+  const AIR = 0.0018;
+  V.stack = { air: AIR,
+    below: ts.map((_, i) => ts.slice(i + 1).reduce((a, v) => a + v, 0) + (ts.length - 1 - i) * AIR),
+    above: ts.map((_, i) => ts.slice(0, i).reduce((a, v) => a + v, 0) + i * AIR) };
   // paper blocks fill the stack under the open pages so the edges read solid
   V.blocks = [0, 1].map(() => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(W * 0.985, H * 0.985, 1), boxMats(true));
     m.castShadow = true; m.receiveShadow = true; m.visible = false; V.book.add(m); return m;
   });
 
-  if (b.insideFront) {
-    const url = b.insideFront.includes("/") ? b.insideFront : `${(b.folder || "").replace(/\/$/, "")}/${b.insideFront}`;
+  // art drawn on the inside of the covers
+  const coverArt = (file, mat, mirror) => {
+    if (!file) return;
+    const url = file.includes("/") ? file : `${(b.folder || "").replace(/\/$/, "")}/${file}`;
     loadImage(url).then((t) => {
-      prep(t); t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1;
-      const m = leaves[0].back.material; m.map?.dispose(); m.map = t; m.needsUpdate = true;
+      prep(t); if (mirror) { t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1; }
+      mat.map?.dispose(); mat.map = t; mat.needsUpdate = true;
     }).catch(() => {});
-  }
+  };
+  coverArt(b.insideFront, leaves[0].back.material, true);
+  coverArt(b.insideBack, leaves[leaves.length - 1].front.material, false);
   const L = leaves.length;
   leaves.forEach((lf, i) => { V.book.add(lf.group); bendLeaf(lf, i, L); });
   return { leaves, P };
@@ -974,11 +982,12 @@ function viewerFrame(now) {
   // paper blocks: the sheets on each side, sitting on that side's cover
   if (V.blocks?.length) {
     let hR = 0, hL = 0;
-    for (let i = 1; i < L - 1; i++) { const lf = V.leaves[i]; hR += (1 - lf.p) * lf.t; hL += lf.p * lf.t; }
+    const air = V.stack?.air || 0;
+    for (let i = 1; i < L - 1; i++) { const lf = V.leaves[i]; hR += (1 - lf.p) * (lf.t + air); hL += lf.p * (lf.t + air); }
     const first = V.leaves[0], last = V.leaves[L - 1];
     const sides = [[V.blocks[0], V.W / 2, last.t * (1 - last.p), hR], [V.blocks[1], -V.W / 2, first.t * first.p, hL]];
     for (const [m, x, z0, h] of sides) {
-      const hh = h - (V.leaves[1]?.t || 0) * 0.5;
+      const hh = h - (V.leaves[1]?.t || 0) * 0.5 - air * 1.5;   // stays just under the top sheet
       m.visible = hh > 0.002;
       if (m.visible) { m.scale.z = hh; m.position.set(V.offsetX + x, 0, z0 + hh / 2); }
     }
