@@ -169,7 +169,7 @@ export default {
       } },
     // Pocket kraft notebook with the traffic-cone cover
     { id: "book-03", title: "Sketchbook 03", color: "#8f4fd6", folder: "assets/sketchbooks/book-03", pages: 58,
-      size: [4.6, 7.5], thickness: 0.18, note: "NSFW",
+      size: [4.6, 7.5], thickness: 0.18, year: 2025, note: "Started Nov 2025 · NSFW",
       corner: 0.4,                         // rounded outer corners (radius, inches)
       nsfw: true,                          // asks for birth year before opening (18+)
       insideFront: "inside-front.jpg",     // art on the inside of the front cover
