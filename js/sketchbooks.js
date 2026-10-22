@@ -80,6 +80,35 @@ function bookThick(b) {
   if (b.thickness) return b.thickness / UNIT_IN;
   return 0.07 + (b.pageList?.length || b.pages || 10) * 0.004;
 }
+// Rounded outer corners (content.js → corner, in inches). The spine side stays square.
+function cornerR(b, w) { return b.corner && b.size ? (b.corner / b.size[0]) * w : 0; }
+// alpha mask for a page/cover plane: u = 0 at the spine, 1 at the outer edge
+const alphaCache = new Map();
+function cornerAlpha(rFrac, aspect) {
+  const key = rFrac.toFixed(4) + "|" + aspect.toFixed(3);
+  if (alphaCache.has(key)) return alphaCache.get(key);
+  const w = 256, h = Math.round(256 * aspect), r = rFrac * w;
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d");
+  g.fillStyle = "#000"; g.fillRect(0, 0, w, h); g.fillStyle = "#fff";
+  g.beginPath(); g.moveTo(0, 0); g.lineTo(w - r, 0); g.arc(w - r, r, r, -Math.PI / 2, 0);
+  g.lineTo(w, h - r); g.arc(w - r, h - r, r, 0, Math.PI / 2); g.lineTo(0, h); g.closePath(); g.fill();
+  const t = new THREE.CanvasTexture(c); alphaCache.set(key, t); return t;
+}
+// a slab (w × h × 1 deep, centred) with the corners on the `outer` side (+1 = +x, -1 = -x) rounded
+function roundedSlab(w, h, r, outer = 1) {
+  const sh = new THREE.Shape(), x0 = -w / 2, x1 = w / 2, y0 = -h / 2, y1 = h / 2;
+  sh.moveTo(x0, y0); sh.lineTo(x1 - r, y0); sh.quadraticCurveTo(x1, y0, x1, y0 + r);
+  sh.lineTo(x1, y1 - r); sh.quadraticCurveTo(x1, y1, x1 - r, y1); sh.lineTo(x0, y1); sh.lineTo(x0, y0);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 1, bevelEnabled: false, curveSegments: 10 });
+  // caps: uv across the shape; split the lid group into bottom (back) and top (cover)
+  const pos = geo.attributes.position, uv = geo.attributes.uv, lid = geo.groups[0].count;
+  for (let i = 0; i < lid; i++) uv.setXY(i, (pos.getX(i) - x0) / w, (pos.getY(i) - y0) / h);
+  geo.clearGroups(); geo.addGroup(0, lid / 2, 1); geo.addGroup(lid / 2, lid / 2, 2); geo.addGroup(lid, pos.count - lid, 0);
+  geo.translate(0, 0, -0.5);
+  if (outer < 0) geo.rotateY(Math.PI);
+  return geo;
+}
 function bookDims(b, aspect = 1.38) {
   if (Array.isArray(b.size) && b.size[0] > 0 && b.size[1] > 0) return { w: b.size[0] / UNIT_IN, h: b.size[1] / UNIT_IN, fixed: true };
   return { w: 1, h: aspect, fixed: false };
@@ -148,6 +177,12 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
     const it = { b, mesh, holder, thick, w: d0.w, h: d0.h, fixedSize: d0.fixed, rotJ: (r() - 0.5) * 0.6, jx: (r() - 0.5) * 0.35, jz: (r() - 0.5) * 0.35,
       phase: r() * 6, lift: 0, hoverT: 0, drop: reducedMotion ? 0 : 1, dropDelay: i * 0.09 };
     mesh.scale.set(it.w, thick, it.h);
+    const rr = it.fixedSize ? cornerR(b, it.w) : 0;
+    if (rr) {   // rounded notebook: lay a rounded slab flat (caps: 1 = back underneath, 2 = cover on top)
+      const geo = roundedSlab(it.w, it.h, rr); geo.rotateX(-Math.PI / 2);
+      mesh.geometry = geo; mesh.material = [edge, backMat, coverMat]; mesh.scale.set(1, thick, 1);
+      mesh.geometry.translate(0, 0, 0);
+    }
     mesh.position.y = thick / 2;
     const p = bookPaths(b);
     loadTex(p.cover, () => placeholderCanvas("cover", b.id, b.title, b.color, 512, 704)).then((t) => {
@@ -454,11 +489,12 @@ function createViewer() {
 
 /* ---- one leaf = one sheet of paper (front + back) ---- */
 const SEG_X = 28, SEG_Y = 6;
-function makeLeaf(W, H, frontTex, backTex, stiff) {
+function makeLeaf(W, H, frontTex, backTex, stiff, alpha = null) {
   const geo = new THREE.PlaneGeometry(W, H, SEG_X, SEG_Y);
-  const front = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.92, side: THREE.FrontSide }));
+  const cut = alpha ? { alphaMap: alpha, alphaTest: 0.5 } : {};
+  const front = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.92, side: THREE.FrontSide, ...cut }));
   backTex.wrapS = THREE.RepeatWrapping; backTex.repeat.x = -1; backTex.offset.x = 1;
-  const back = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: backTex, roughness: 0.92, side: THREE.BackSide }));
+  const back = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: backTex, roughness: 0.92, side: THREE.BackSide, ...cut }));
   for (const m of [front, back]) { m.castShadow = true; m.receiveShadow = true; }
   const g = new THREE.Group(); g.add(front, back);
   return { geo, group: g, front, back, W, H, stiff, p: 0, v: 0, target: 0, curl: 0, corner: 0, dragging: false, dirty: true };
@@ -534,10 +570,12 @@ async function buildBook(b) {
   const sheets = Math.ceil(P / 2);
   const leaves = [];
   // front cover
-  leaves.push(makeLeaf(W * 1.015, H * 1.02, cover, prep(new THREE.CanvasTexture(endpaperCanvas(b.inside || b.color, b.endpaper === false ? { id: b.id, plain: true } : b.id))), true));
+  const rr = cornerR(b, W);
+  const aPage = rr ? cornerAlpha(rr / W, H / W) : null, aCover = rr ? cornerAlpha((rr * 1.015) / (W * 1.015), (H * 1.02) / (W * 1.015)) : null;
+  leaves.push(makeLeaf(W * 1.015, H * 1.02, cover, prep(new THREE.CanvasTexture(endpaperCanvas(b.inside || b.color, b.endpaper === false ? { id: b.id, plain: true } : b.id))), true, aCover));
   // paper: placeholder paper first, swap to real image when it arrives
   for (let k = 0; k < sheets; k++) {
-    const leaf = makeLeaf(W, H, prep(new THREE.CanvasTexture(paperCanvas())), prep(new THREE.CanvasTexture(paperCanvas())), false);
+    const leaf = makeLeaf(W, H, prep(new THREE.CanvasTexture(paperCanvas())), prep(new THREE.CanvasTexture(paperCanvas())), false, aPage);
     leaves.push(leaf);
     const fi = 2 * k, bi = 2 * k + 1;
     pageTex(fi, k + 1, "front").then((t) => { leaf.front.material.map.dispose(); leaf.front.material.map = t; leaf.front.material.needsUpdate = true; });
@@ -555,7 +593,7 @@ async function buildBook(b) {
   const rest = Math.max(0, Tp - sheets * g);                          // the unused pages
   // back cover: inside shows blank paper when there are unused pages
   const backInside = rest > 0.004 ? prep(new THREE.CanvasTexture(paperCanvas())) : prep(new THREE.CanvasTexture(endpaperCanvas(b.inside || b.color, b.endpaper === false ? { id: b.id + "b", plain: true } : b.id + "b")));
-  leaves.push(makeLeaf(W * 1.015, H * 1.02, backInside, backCover, true));
+  leaves.push(makeLeaf(W * 1.015, H * 1.02, backInside, backCover, true, aCover));
   const edgeH = prep(new THREE.CanvasTexture(edgeCanvas())), edgeV = edgeH.clone();
   edgeV.center.set(0.5, 0.5); edgeV.rotation = Math.PI / 2; edgeV.needsUpdate = true;
   const sideMats = (tex) => tex ? [new THREE.MeshStandardMaterial({ map: edgeV, roughness: 0.95 })] : [new THREE.MeshStandardMaterial({ color: shade(b.color, 0.8), roughness: 0.6 })];
@@ -584,8 +622,10 @@ async function buildBook(b) {
     below: ts.map((_, i) => ts.slice(i + 1).reduce((a, v) => a + v, 0) + (ts.length - 1 - i) * AIR),
     above: ts.map((_, i) => ts.slice(0, i).reduce((a, v) => a + v, 0) + i * AIR) };
   // paper blocks fill the stack under the open pages so the edges read solid
-  V.blocks = [0, 1].map(() => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(W * 0.985, H * 0.985, 1), boxMats(true));
+  V.blocks = [1, -1].map((side) => {
+    const bm = boxMats(true);
+    const m = rr ? new THREE.Mesh(roundedSlab(W * 0.985, H * 0.985, rr * 0.985, side), [paperSide, hidden, hidden])
+                 : new THREE.Mesh(new THREE.BoxGeometry(W * 0.985, H * 0.985, 1), bm);
     m.castShadow = true; m.receiveShadow = true; m.visible = false; V.book.add(m); return m;
   });
 
