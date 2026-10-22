@@ -146,12 +146,15 @@ export default {
      instead of `pages`.                                                    */
   sketchbooks: [
     // size: [width, height] in inches — books show at their true size relative to each other
+    // thickness: inches, covers included — the book keeps this thickness however many
+    //            pages are uploaded (the rest shows as blank pages at the back)
+    // hardcover: true gives the covers thick boards
     { id: "book-01", title: "Sketchbook 01", year: 2026, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 19,
-      size: [5.25, 8.25], note: "Sep – Oct 2026" },
+      size: [5.25, 8.25], thickness: 0.85, hardcover: true, note: "Sep – Oct 2026" },
     // Started Nov 2023. Page photos were taken recently, so their dates can't be used
     // for ordering — pages are numbered by hand (page-01, page-02, … in the order sent).
     { id: "book-02", title: "Sketchbook 02", year: 2023, color: "#ff8a00", folder: "assets/sketchbooks/book-02", pages: 35,
-      size: [8.25, 10], note: "Started Nov 2023",
+      size: [8.25, 10], thickness: 0.72, note: "Started Nov 2023",
       // Sticky notes you can lift: page number → the photo with the notes lifted,
       // plus one outline per note ([x, y] corners, 0–1 across / down the page).
       // Tapping a note peels it up to show that spot of the "lift" photo.
@@ -164,6 +167,10 @@ export default {
           [[0.62, 0.455], [0.97, 0.455], [0.97, 0.735], [0.62, 0.735]],       // green note
         ] },
       } },
+    // Pocket kraft notebook with the traffic-cone cover
+    { id: "book-03", title: "Sketchbook 03", color: "#8f4fd6", folder: "assets/sketchbooks/book-03", pages: 0,
+      size: [4.6, 7.5], thickness: 0.18,
+      endpaper: false, inside: "#b9916c" },   // plain kraft inside covers (inside: their colour)
   ],
 
   /* ---------- Extras ----------

@@ -44,8 +44,12 @@ function bookPaths(b) {
 // Endpaper: book colour with a tiny ink star pattern.
 function endpaperCanvas(color, seed) {
   const c = document.createElement("canvas"); c.width = 512; c.height = 704;
-  const g = c.getContext("2d"), r = seeded(seed);
+  const g = c.getContext("2d"), r = seeded(seed.id ?? seed);
   g.fillStyle = color; g.fillRect(0, 0, 512, 704);
+  if (seed.plain) {                                    // plain inside cover (e.g. kraft): just a little grain
+    for (let i = 0; i < 2500; i++) { g.fillStyle = `rgba(${r() < 0.5 ? "0,0,0" : "255,255,255"},${r() * 0.06})`; g.fillRect(r() * 512, r() * 704, 2, 2); }
+    return c;
+  }
   g.fillStyle = "rgba(13,13,13,.85)"; g.font = "28px sans-serif"; g.textAlign = "center";
   for (let y = 30; y < 704; y += 64) for (let x = (y / 64) % 2 ? 32 : 0; x < 540; x += 64) g.fillText(r() < 0.5 ? "✦" : "★", x, y);
   return c;
@@ -71,6 +75,11 @@ export const getShelf = () => shelf;
 // 1 unit wide and its height follows the cover photo's shape.
 const UNIT_IN = 5.25;
 let allBooks = [];
+// book thickness in scene units (covers included); the old page-count guess if not set
+function bookThick(b) {
+  if (b.thickness) return b.thickness / UNIT_IN;
+  return 0.07 + (b.pageList?.length || b.pages || 10) * 0.004;
+}
 function bookDims(b, aspect = 1.38) {
   if (Array.isArray(b.size) && b.size[0] > 0 && b.size[1] > 0) return { w: b.size[0] / UNIT_IN, h: b.size[1] / UNIT_IN, fixed: true };
   return { w: 1, h: aspect, fixed: false };
@@ -127,7 +136,7 @@ export function initShelf({ books, theme, canvas, label, onOpen }) {
 
   const items = books.map((b, i) => {
     const r = seeded(b.id);
-    const thick = 0.07 + (b.pageList?.length || b.pages || 10) * 0.004;
+    const thick = bookThick(b);
     const coverMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 });
     const backMat = new THREE.MeshStandardMaterial({ color: b.color, roughness: 0.6 });
     const edge = new THREE.MeshStandardMaterial({ map: edgeTex, roughness: 0.9 });
@@ -458,10 +467,18 @@ function makeLeaf(W, H, frontTex, backTex, stiff) {
 function bendLeaf(leaf, i, L) {
   const { geo, W, H } = leaf;
   const pos = geo.attributes.position;
-  const gap = 0.0035;
   const p = leaf.p;
-  const zBase = lerp((L - 1 - i) * gap, i * gap, p) + (leaf.stiff ? 0.002 : 0);
+  // stacked on whatever is below it on the right (unturned) or left (turned) side;
+  // each leaf has its own thickness t (covers / the blank pages at the back are thick)
+  const S = V.stack;
+  const zR = S ? S.below[i] : (L - 1 - i) * 0.0035, zL = S ? S.above[i] : i * 0.0035, t = leaf.t || 0;
+  const zBase = lerp(zR, zL, p) + t * (1 - p) + (leaf.stiff && !t ? 0.002 : 0);
   const theta = p * Math.PI;
+  if (leaf.slab) {
+    // thick leaf: the inner face sits t behind the outer one, the slab fills between
+    leaf.back.position.set(Math.sin(theta) * t, 0, -Math.cos(theta) * t);
+    leaf.slab.rotation.y = -theta; leaf.slab.position.z = zBase;
+  }
   const ds = W / SEG_X;
   for (let r = 0; r <= SEG_Y; r++) {
     const yN = 1 - r / SEG_Y; // 1 = top row
@@ -517,7 +534,7 @@ async function buildBook(b) {
   const sheets = Math.ceil(P / 2);
   const leaves = [];
   // front cover
-  leaves.push(makeLeaf(W * 1.015, H * 1.02, cover, prep(new THREE.CanvasTexture(endpaperCanvas(b.color, b.id))), true));
+  leaves.push(makeLeaf(W * 1.015, H * 1.02, cover, prep(new THREE.CanvasTexture(endpaperCanvas(b.inside || b.color, b.endpaper === false ? { id: b.id, plain: true } : b.id))), true));
   // paper: placeholder paper first, swap to real image when it arrives
   for (let k = 0; k < sheets; k++) {
     const leaf = makeLeaf(W, H, prep(new THREE.CanvasTexture(paperCanvas())), prep(new THREE.CanvasTexture(paperCanvas())), false);
@@ -529,8 +546,44 @@ async function buildBook(b) {
       leaf.back.material.map.dispose(); leaf.back.material.map = t; leaf.back.material.needsUpdate = true;
     });
   }
-  // back cover
-  leaves.push(makeLeaf(W * 1.015, H * 1.02, prep(new THREE.CanvasTexture(endpaperCanvas(b.color, b.id + "b"))), backCover, true));
+  // ---- thickness: the book always has its real thickness (content.js → thickness);
+  // pages not uploaded yet are a block of blank paper riding on the back cover ----
+  const T = bookThick(b);
+  const tb = b.hardcover ? 0.075 / UNIT_IN : 0.0016;                 // cover board
+  const Tp = Math.max(0, T - 2 * tb);
+  const g = sheets ? Math.min(Tp / sheets, 0.008) : 0;               // one sheet of paper
+  const rest = Math.max(0, Tp - sheets * g);                          // the unused pages
+  // back cover: inside shows blank paper when there are unused pages
+  const backInside = rest > 0.004 ? prep(new THREE.CanvasTexture(paperCanvas())) : prep(new THREE.CanvasTexture(endpaperCanvas(b.inside || b.color, b.endpaper === false ? { id: b.id + "b", plain: true } : b.id + "b")));
+  leaves.push(makeLeaf(W * 1.015, H * 1.02, backInside, backCover, true));
+  const edgeH = prep(new THREE.CanvasTexture(edgeCanvas())), edgeV = edgeH.clone();
+  edgeV.center.set(0.5, 0.5); edgeV.rotation = Math.PI / 2; edgeV.needsUpdate = true;
+  const sideMats = (tex) => tex ? [new THREE.MeshStandardMaterial({ map: edgeV, roughness: 0.95 })] : [new THREE.MeshStandardMaterial({ color: shade(b.color, 0.8), roughness: 0.6 })];
+  const paperSide = sideMats(true)[0], paperEnd = new THREE.MeshStandardMaterial({ map: edgeH, roughness: 0.95 });
+  const hidden = new THREE.MeshBasicMaterial({ visible: false });
+  const boxMats = (paper) => paper ? [paperSide, paperSide, paperEnd, paperEnd, hidden, hidden] : (() => { const m = sideMats(false)[0]; return [m, m, m, m, hidden, hidden]; })();
+  V.boxMats = [paperSide, paperEnd, hidden, edgeH, edgeV];
+  // a slab hangs under a thick leaf's outer face, hinged at the spine
+  const addSlab = (lf, t, paper) => {
+    lf.t = t;
+    if (t < 0.003) return;
+    const geo = new THREE.BoxGeometry(lf.W * (paper ? 0.985 : 1), lf.H * (paper ? 0.985 : 1), t * 0.97);
+    geo.translate(lf.W / 2, 0, -t / 2);
+    lf.slab = new THREE.Mesh(geo, boxMats(paper)); lf.slab.castShadow = true; lf.slab.receiveShadow = true;
+    lf.group.add(lf.slab);
+    lf.slabMats = paper ? [] : [lf.slab.material[0]];
+  };
+  addSlab(leaves[0], tb, false);
+  for (let k = 1; k < leaves.length - 1; k++) leaves[k].t = g;
+  addSlab(leaves[leaves.length - 1], tb + rest, rest > tb);
+  // where each leaf rests: on top of the thickness of everything under it, per side
+  const ts = leaves.map((l) => l.t);
+  V.stack = { below: ts.map((_, i) => ts.slice(i + 1).reduce((a, v) => a + v, 0)), above: ts.map((_, i) => ts.slice(0, i).reduce((a, v) => a + v, 0)) };
+  // paper blocks fill the stack under the open pages so the edges read solid
+  V.blocks = [0, 1].map(() => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(W * 0.985, H * 0.985, 1), boxMats(true));
+    m.castShadow = true; m.receiveShadow = true; m.visible = false; V.book.add(m); return m;
+  });
 
   const L = leaves.length;
   leaves.forEach((lf, i) => { V.book.add(lf.group); bendLeaf(lf, i, L); });
@@ -542,7 +595,11 @@ function disposeBook() {
     V.book.remove(lf.group);
     lf.geo.dispose();
     for (const m of [lf.front.material, lf.back.material]) { m.map?.dispose(); m.dispose(); }
+    if (lf.slab) { lf.slab.geometry.dispose(); lf.slabMats.forEach((m) => m.dispose()); }
   }
+  for (const m of V.blocks || []) { V.book.remove(m); m.geometry.dispose(); }
+  for (const m of V.boxMats || []) m.dispose();
+  V.blocks = []; V.boxMats = []; V.stack = null;
   V.leaves = []; V.layers = [];
 }
 
@@ -907,6 +964,18 @@ function viewerFrame(now) {
   const pFirst = V.leaves[0].p, pLast = V.leaves[L - 1].p;
   V.offsetX = (-V.W / 2) * (1 - pFirst) + (V.W / 2) * pLast;
   V.leaves.forEach((lf) => (lf.group.position.x = V.offsetX));
+  // paper blocks: the sheets on each side, sitting on that side's cover
+  if (V.blocks?.length) {
+    let hR = 0, hL = 0;
+    for (let i = 1; i < L - 1; i++) { const lf = V.leaves[i]; hR += (1 - lf.p) * lf.t; hL += lf.p * lf.t; }
+    const first = V.leaves[0], last = V.leaves[L - 1];
+    const sides = [[V.blocks[0], V.W / 2, last.t * (1 - last.p), hR], [V.blocks[1], -V.W / 2, first.t * first.p, hL]];
+    for (const [m, x, z0, h] of sides) {
+      const hh = h - (V.leaves[1]?.t || 0) * 0.5;
+      m.visible = hh > 0.002;
+      if (m.visible) { m.scale.z = hh; m.position.set(V.offsetX + x, 0, z0 + hh / 2); }
+    }
+  }
 
   // rotation + tilt glide smoothly to where they're set
   V.spin = lerp(V.spin, V.spinTarget, 1 - Math.exp(-dt * 9));
