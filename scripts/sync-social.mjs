@@ -307,7 +307,7 @@ async function syncInstagram(token) {
   try {
     // keep the 60-day token alive
     await getJSON(`https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`, 1).catch(() => {});
-    let url = `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit=50&access_token=${token}`;
+    let url = `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,children{media_type,media_url,thumbnail_url}&limit=50&access_token=${token}`;
     let n = 0;
     while (url && n < IG_LIMIT) {
       const page = await getJSON(url);
@@ -319,8 +319,22 @@ async function syncInstagram(token) {
         const have = posts.get(`instagram:${m.id}`)?.image;
         if (have && await fs.stat(path.join(ROOT, have)).then(() => true, () => false)) image = have;   // already saved
         else if (src) { try { image = await download(src, `${MEDIA}/instagram/${m.id}.jpg`); } catch (e) { warn(`IG image ${m.id}: ${e.message}`); } }
+        // multi-photo posts: save every photo (images[0] is the cover)
+        let images = null;
+        const kids = m.children?.data || [];
+        if (kids.length > 1) {
+          images = [];
+          for (const [k, c] of kids.entries()) {
+            const rel = k === 0 && image ? image : `${MEDIA}/instagram/${m.id}-${k}.jpg`;
+            const abs = path.join(ROOT, rel);
+            if (await fs.stat(abs).then(() => true, () => false)) { images.push(rel); continue; }
+            const csrc = c.media_type === "VIDEO" ? c.thumbnail_url : c.media_url;
+            if (!csrc) continue;
+            try { images.push(await download(csrc, rel)); } catch (e) { warn(`IG image ${m.id}/${k}: ${e.message}`); }
+          }
+        }
         upsert({ platform: "instagram", id: m.id, url: m.permalink, caption: m.caption || "", title: cleanTitle(m.caption || ""),
-          date: m.timestamp ? new Date(m.timestamp).toISOString() : null, image, video: m.media_type === "VIDEO" });
+          date: m.timestamp ? new Date(m.timestamp).toISOString() : null, image, images, video: m.media_type === "VIDEO" });
       }
       url = page.paging?.next;
     }

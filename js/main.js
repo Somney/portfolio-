@@ -8,6 +8,7 @@ import { initGlitch } from "./glitch.js";
 import { startViz } from "./viz.js";
 import { getAnalyser } from "./sound.js";
 import { sortPosts } from "./social-sort.js";
+import { makeFlow } from "./flow.js";
 
 const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [], social = {} } = content;
 const INK = theme.ink, PAPER = theme.paper, PAL = theme.palette;
@@ -28,31 +29,6 @@ const postLightbox = (posts, color) => posts.map((p) => ({
   kind: "embed", post: p, src: p.image, title: p.title, color,
   caption: `<strong>${esc(p.title || "Untitled")}</strong><span>${esc([fmtDate(p.date), tagLine(p, 6)].filter(Boolean).join(" · "))}</span>${postLink(p)}`,
 }));
-
-// newest covers from sections marked inPaintings → a paintings series
-const fresh = buckets.filter((b) => b.inPaintings).flatMap((b) => b.posts).filter((p) => p.art || p.image)
-  .sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 24);
-if (fresh.length) paintings.unshift({
-  id: "feed", title: "Fresh from the feed", color: PAL[3] || "#ff8a00", ink: INK,
-  blurb: `My latest pieces, pulled straight from ${[social.tiktok && "TikTok", feed?.posts?.some((p) => p.platform === "instagram") && "Instagram"].filter(Boolean).join(" & ")} and sorted by hashtag.`,
-  items: fresh.map((p) => ({ title: p.title || "Untitled", year: p.date?.slice(0, 4), medium: tagLine(p), image: p.art || p.image, post: p })),
-});
-
-// sections marked gallery: "<title>" also get their own Cover Flow series (one card per piece:
-// Instagram often has a video + a picture of the same piece, keep the picture)
-for (const b of buckets.filter((b) => b.gallery)) {
-  const seen = new Set(), items = [];
-  for (const p of [...b.posts].sort((x, y) => (x.video ? 1 : 0) - (y.video ? 1 : 0) || (y.date || "").localeCompare(x.date || ""))) {
-    const key = (p.title || p.id).toLowerCase().replace(/[^a-z0-9]+/g, "") || p.id;
-    if (seen.has(key) || !(p.art || p.image)) continue;
-    seen.add(key); items.push(p);
-  }
-  items.sort((x, y) => (y.date || "").localeCompare(x.date || ""));
-  if (items.length) paintings.push({
-    id: "g-" + b.id, title: b.gallery, color: b.color, ink: contrastOn(b.color, INK, PAPER),
-    blurb: b.blurb || "", items: items.slice(0, b.galleryLimit || 60).map((p) => ({ title: p.title || "Untitled", year: p.date?.slice(0, 4), medium: tagLine(p), image: p.art || p.image, post: p })),
-  });
-}
 
 /* ---------- Theme + text ---------- */
 const root = document.documentElement.style;
@@ -115,7 +91,7 @@ $(".hero").addEventListener("click", (e) => {
 });
 
 /* ---------- Marquee ---------- */
-const mq = ["PAINTINGS", "✦", "DIGITAL", "✦", "PHOTOGRAPHY", "✦", "SKETCHBOOKS", "✦", "EXTRAS", "✦", artist.name.toUpperCase(), "★", ...(artist.slogan ? [artist.slogan.toUpperCase(), "★"] : [])].join("  ");
+const mq = [...(content.work || []).flatMap((w) => [w.title.toUpperCase(), "✦"]), "SKETCHBOOKS", "✦", "EXTRAS", "✦", artist.name.toUpperCase(), "★", ...(artist.slogan ? [artist.slogan.toUpperCase(), "★"] : [])].join("  ");
 $(".marquee__track").textContent = `${mq}  ${mq}  ${mq}  ${mq}  `;
 
 /* ---------- Lightbox ---------- */
@@ -158,7 +134,7 @@ function closeLightbox() {
 }
 $(".lb-close", lb).onclick = closeLightbox;
 lb.addEventListener("click", (e) => { if (e.target === lb) closeLightbox(); });
-lb.addEventListener("wheel", (e) => e.preventDefault(), { passive: false });   // no scrolling the page behind
+lb.addEventListener("wheel", (e) => { if (!e.target.closest(".lb-poem")) e.preventDefault(); }, { passive: false });   // no scrolling the page behind
 $(".lb-prev", lb).onclick = () => { lbIdx = (lbIdx - 1 + lbList.length) % lbList.length; lbShow(); };
 $(".lb-next", lb).onclick = () => { lbIdx = (lbIdx + 1) % lbList.length; lbShow(); };
 addEventListener("keydown", (e) => {
@@ -168,150 +144,77 @@ addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight" && lbList.length > 1) $(".lb-next", lb).click();
 });
 
-/* ---------- Paintings: series tabs + Cover Flow ---------- */
-const pSec = $(".paintings");
-let series = 0, active = 0, cfItems = [];
-const pBG = new SplashBG($(".splash-bg", pSec), paintings[0]?.color || PAL[0], INK);
-const stage = $(".coverflow__stage");
-const tabs = $(".series-tabs");
-
-paintings.forEach((s, i) => {
-  const b = el("button", "series-tab", `<i style="background:${esc(s.color)}"></i>${esc(s.title)}`);
-  b.setAttribute("role", "tab");
-  b.onclick = (e) => switchSeries(i, e);
-  tabs.append(b);
-});
-
-function seriesItems(s) {
-  if (s.id === "feed") return postLightbox(s.items.map((it) => it.post), s.color);
-  return s.items.map((it) => ({
-    kind: "image", src: it.image, title: it.title, color: s.color,
-    caption: `<strong>${esc(it.title)}</strong><span>${[it.year, it.medium, it.size].filter(Boolean).map(esc).join(" · ")}</span>` +
-      (it.note ? `<em class="lb-note">${esc(it.note)}</em>` : "") +
-      (it.link ? `<a class="lb-link" href="${esc(it.link)}" target="_blank" rel="noopener">${/tiktok/.test(it.link) ? "Watch on TikTok" : "View on Instagram"} ↗</a>` : ""),
-  }));
+/* ---------- Work: one Cover Flow per skill (content.js → work) ----------
+   Each section pulls from feed sections (from: [...ids]) and/or the hand-made
+   series in content.js → paintings (paintings: true). One card per piece:
+   duplicates (Instagram often has a video + a photo of the same piece) are
+   dropped, and multi-photo posts open as a swipeable set in the full-screen view. */
+const work = content.work || [];
+const keyOf = (p) => (p.title || "").toLowerCase().replace(/[^a-z0-9]+/g, "") || p.id;
+function postPiece(p) {
+  const imgs = (p.images?.length ? p.images : [p.art || p.image]).filter(Boolean);
+  return { title: p.title || "Untitled", meta: [p.date?.slice(0, 4), p.platform === "instagram" ? "Instagram" : "TikTok"].filter(Boolean).join(" · "),
+    image: p.art || imgs[0], images: p.art ? [p.art] : imgs, post: p, date: p.date || "" };
 }
-
-function buildCoverflow() {
-  const s = paintings[series];
-  stage.innerHTML = "";
-  cfItems = s.items.map((it, i) => {
-    const card = el("button", "cf-item");
-    card.setAttribute("aria-label", it.title);
-    card.append(smartImg(it.image, { label: it.title, color: s.color === PAL[i % PAL.length] ? INK : PAL[(i + series + 1) % PAL.length], seed: s.id + i }));
-    card.addEventListener("click", () => {
-      if (cfDragged) return;
-      if (i === active) openLightbox(seriesItems(s), i);
-      else setActive(i);
+function workPieces(w) {
+  const out = [], seen = new Set();
+  if (w.paintings) for (const s of paintings) for (const it of s.items) {
+    out.push({ title: it.title, meta: [it.year, it.medium, it.size].filter(Boolean).join(" · "), image: it.image, images: [it.image], item: it, date: String(it.year || "") + "-99" });
+    seen.add((it.title || "").toLowerCase().replace(/[^a-z0-9]+/g, ""));
+  }
+  // from: ["digital", "sketchbook@instagram"] — a feed section, optionally only one platform's posts
+  const posts = (w.from || []).flatMap((f) => { const [id, plat] = f.split("@"); return (buckets.find((b) => b.id === id)?.posts || []).filter((p) => !plat || p.platform === plat); })
+    .filter((p) => p.art || (!p.video && p.image) || p.images?.length)       // pictures only; videos live in Videos
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  for (const p of posts) { const k = keyOf(p); if (seen.has(k)) continue; seen.add(k); out.push(postPiece(p)); }
+  return out;
+}
+function slidesFor(w, pieces) {
+  const slides = [], first = [];
+  pieces.forEach((pc) => {
+    first.push(slides.length);
+    pc.images.forEach((src, k) => {
+      const p = pc.post, n = pc.images.length;
+      const text = "";
+      slides.push({ kind: "image", src, title: pc.title, color: w.color,
+        caption: `<strong>${esc(pc.title)}</strong><span>${esc(pc.meta)}${n > 1 ? ` · photo ${k + 1} of ${n}` : ""}</span>` +
+          (pc.item?.note ? `<em class="lb-note">${esc(pc.item.note)}</em>` : "") + text +
+          (p ? postLink(p) : pc.item?.link ? `<a class="lb-link" href="${esc(pc.item.link)}" target="_blank" rel="noopener">${/tiktok/.test(pc.item.link) ? "Watch on TikTok" : "View on Instagram"} ↗</a>` : "") });
     });
-    stage.append(card);
-    return card;
   });
-  active = Math.min(active, cfItems.length - 1);
-  layoutCoverflow(active);
-  updateCaption();
+  return { slides, first };
 }
-
-function layoutCoverflow(pos) {
-  const W = cfItems[0]?.offsetWidth || 260;
-  cfItems.forEach((card, i) => {
-    const d = i - pos, a = Math.abs(d), sg = Math.sign(d);
-    const x = a < 1 ? d * W * 0.75 : sg * (W * 0.75 + (a - 1) * W * 0.3);
-    const ry = -sg * Math.min(a, 1) * 62;
-    const z = -Math.min(a, 1) * W * 0.55 + (a < 1 ? (1 - a) * 60 : 0);
-    card.style.transform = `translate(-50%,-50%) translateX(${x}px) translateZ(${z}px) rotateY(${ry}deg)`;
-    card.style.zIndex = 100 - Math.round(a * 10);
-    card.style.opacity = a > 5.5 ? 0 : 1;
-    card.classList.toggle("is-active", Math.round(pos) === i);
-  });
+const workList = $(".work__list"), workNav = $(".work-nav");
+const workSecs = [], workKeys = new Set();
+for (const w of work) {
+  const pieces = workPieces(w);
+  pieces.forEach((pc) => pc.post && workKeys.add(keyOf(pc.post)));
+  if (!pieces.length) continue;
+  const sec = el("section", "wsec");
+  sec.id = "work-" + w.id;
+  sec.style.setProperty("--wbg", w.color); sec.style.setProperty("--sec-ink", contrastOn(w.color, INK, PAPER));
+  sec.innerHTML = `<div class="wsec__head"><h3 class="wsec__title">${esc(w.title)}</h3><p class="wsec__blurb">${esc(w.blurb || "")} <b>${pieces.length} pieces</b></p></div><div class="wsec__flow"></div>`;
+  workList.append(sec);
+  const { slides, first } = slidesFor(w, pieces);
+  makeFlow($(".wsec__flow", sec), pieces, { seed: w.id, tint: (i) => PAL[(i + 1) % PAL.length], onOpen: (i) => openLightbox(slides, first[i]) });
+  const chip = el("a", "series-tab", `<i style="background:${esc(w.color)}"></i>${esc(w.title)}`);
+  chip.href = "#" + sec.id;
+  chip.onclick = (e) => { e.preventDefault(); sec.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth" }); };
+  workNav.append(chip);
+  workSecs.push({ w, sec });
 }
-
-function updateCaption() {
-  const it = paintings[series]?.items[active];
-  if (!it) return;
-  $(".cf-caption__text strong").textContent = it.title;
-  $(".cf-caption__text span").textContent = [it.year, it.medium, it.size].filter(Boolean).join(" · ");
-}
-
-function setActive(i) {
-  const n = clamp(i, 0, cfItems.length - 1);
-  if (n !== active) flowTick(n);
-  active = n; layoutCoverflow(active); updateCaption();
-}
-
-function paintSeriesText() {
-  const s = paintings[series];
-  pSec.style.setProperty("--sec-ink", s.ink || contrastOn(s.color, INK, PAPER));
-  $(".series-info__title").textContent = s.title;
-  $(".series-info__blurb").textContent = s.blurb || "";
-  $$(".series-tab").forEach((t, i) => t.classList.toggle("on", i === series));
-}
-
-function switchSeries(i, e) {
-  if (i === series) return;
-  const r = pSec.getBoundingClientRect();
-  glitch.burst(1.6);
-  pBG.to(paintings[i].color, e ? e.clientX - r.left : r.width / 2, e ? e.clientY - r.top : r.height / 2, 850);
-  stage.classList.add("out");
-  setTimeout(() => {
-    series = i; active = 0;
-    paintSeriesText(); buildCoverflow();
-    stage.classList.remove("out"); stage.classList.add("in");
-    setTimeout(() => stage.classList.remove("in"), 600);
-  }, 380);
-}
-
-// drag / swipe / wheel / keys
-let cfDragged = false;
-{
-  const cf = $(".coverflow");
-  let x0 = 0, start = 0, down = false, dragIdx = 0;
-  cf.addEventListener("pointerdown", (e) => { down = true; cfDragged = false; x0 = e.clientX; start = active; dragIdx = active; });
-  addEventListener("pointermove", (e) => {
-    if (!down) return;
-    const dx = e.clientX - x0;
-    if (Math.abs(dx) > 6 && !cfDragged) { cfDragged = true; stage.classList.add("dragging"); }
-    if (cfDragged) {
-      const pos = clamp(start - dx / ((cfItems[0]?.offsetWidth || 260) * 0.45), -0.4, cfItems.length - 0.6);
-      const idx = Math.round(pos);
-      if (idx !== dragIdx) { dragIdx = idx; flowTick(idx); }
-      layoutCoverflow(pos);
-    }
-  });
-  addEventListener("pointerup", (e) => {
-    if (!down) return; down = false;
-    stage.classList.remove("dragging");
-    if (cfDragged) {
-      const land = clamp(Math.round(start - (e.clientX - x0) / ((cfItems[0]?.offsetWidth || 260) * 0.45)), 0, cfItems.length - 1);
-      if (land === dragIdx) { active = land; layoutCoverflow(active); updateCaption(); } else setActive(land);
-      setTimeout(() => (cfDragged = false), 0);
-    }
-  });
-  let wheelAcc = 0;
-  cf.addEventListener("wheel", (e) => {
-    if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
-    e.preventDefault(); wheelAcc += e.deltaX;
-    if (Math.abs(wheelAcc) > 60) { setActive(active + Math.sign(wheelAcc)); wheelAcc = 0; }
-  }, { passive: false });
-  cf.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowLeft") setActive(active - 1);
-    if (e.key === "ArrowRight") setActive(active + 1);
-    if (e.key === "Enter") openLightbox(seriesItems(paintings[series]), active);
-  });
-  $$(".cf-arrow").forEach((b) => (b.onclick = () => setActive(active + +b.dataset.dir)));
-  addEventListener("resize", () => layoutCoverflow(active));
-}
-if (paintings.length) { paintSeriesText(); buildCoverflow(); $$(".series-tab")[0].classList.add("on"); }
-if (paintings.length < 2) tabs.hidden = true;
 
 /* ---------- Videos: posts sorted into tabs by hashtag ---------- */
 const vSec = $(".videos");
-if (!buckets.length) { vSec.hidden = true; $$('[data-nav="videos"]').forEach((a) => (a.hidden = true)); }
+const vBuckets = buckets.filter((b) => b.videos !== false)
+  // videos only; an Instagram video of a piece already shown in Work is a repeat, so it's left out
+  .map((b) => ({ ...b, posts: b.posts.filter((p) => p.platform === "tiktok" || (p.video && !workKeys.has(keyOf(p)))) })).filter((b) => b.posts.length);
+if (!vBuckets.length) { vSec.hidden = true; $$('[data-nav="videos"]').forEach((a) => (a.hidden = true)); }
 else {
   let vb = 0;
-  const vBG = new SplashBG($(".splash-bg", vSec), buckets[0].color || PAL[0], INK);
+  const vBG = new SplashBG($(".splash-bg", vSec), vBuckets[0].color || PAL[0], INK);
   const vTabs = $(".video-tabs"), row = $(".vrow");
-  buckets.forEach((b, i) => {
+  vBuckets.forEach((b, i) => {
     const t = el("button", "series-tab", `<i style="background:${esc(b.color || PAL[i % PAL.length])}"></i>${esc(b.title)} <small>${b.posts.length}</small>`);
     t.onclick = (e) => {
       if (i === vb) return;
@@ -323,7 +226,7 @@ else {
     vTabs.append(t);
   });
   function renderRow() {
-    const b = buckets[vb];
+    const b = vBuckets[vb];
     vSec.style.setProperty("--sec-ink", contrastOn(b.color || PAL[0], INK, PAPER));
     $$(".series-tab", vTabs).forEach((t, i) => t.classList.toggle("on", i === vb));
     row.innerHTML = ""; row.scrollLeft = 0;
@@ -520,16 +423,16 @@ function socialEmbed(url = "") {
 /* ---------- Section navigation with splash transitions ---------- */
 const SECTIONS = [
   { id: "home", label: "Home", color: () => PAL[heroIdx] },
-  { id: "paintings", label: "Work", color: () => paintings[series]?.color || PAL[0] },
-  ...(buckets.length ? [{ id: "videos", label: "Videos", color: () => buckets[0].color || PAL[0] }] : []),
+  ...workSecs.map(({ w, sec }) => ({ id: sec.id, label: w.title, color: () => w.color })),
+  ...(vBuckets.length ? [{ id: "videos", label: "Videos", color: () => vBuckets[0].color || PAL[0] }] : []),
   { id: "sketchbooks", label: "Sketchbooks", color: () => INK, ink: () => PAL[1] },
   { id: "extras", label: "Extras", color: () => PAPER },
   { id: "contact", label: "Contact", color: () => PAL[1 % PAL.length] },
 ];
 function goTo(id, x, y) {
-  const s = SECTIONS.find((s) => s.id === id);
+  const s = SECTIONS.find((s) => s.id === id) || { color: () => work[0]?.color || PAL[0] };
   const target = document.getElementById(id);
-  if (!s || !target) return;
+  if (!target) return;
   history.replaceState(null, "", "#" + id);
   glitch.burst(2.2);
   splashTransition({ color: s.color(), ink: s.ink ? s.ink() : INK, x, y, onCovered: () => target.scrollIntoView({ behavior: "instant" }) });
@@ -666,7 +569,7 @@ addEventListener("keydown", (e) => {
 
 /* ---------- Scroll reveal ---------- */
 const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))), { threshold: 0.15 });
-$$(".sec-title, .series-info, .sec-sub, .contact__big, .reveal").forEach((n) => { n.classList.add("reveal"); io.observe(n); });
+$$(".sec-title, .wsec__head, .sec-sub, .contact__big, .reveal").forEach((n) => { n.classList.add("reveal"); io.observe(n); });
 
 /* ---------- Deep links: #sketchbook/<id> opens that book ---------- */
 const m = location.hash.match(/^#sketchbook\/([\w-]+)(?:\/(\d+))?/);

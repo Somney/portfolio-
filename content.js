@@ -30,9 +30,7 @@ export default {
        phrases: optional caption phrases, e.g. "completed this sketchbook"
        match: "*"         would collect everything left over (off for now,
                           so personal posts stay off the portfolio)
-       inPaintings: true  also show these covers in Paintings as the
-                          "Fresh from the feed" series
-       gallery: "Title"   give this section its own Cover Flow tab in Paintings
+       videos: false      keep this section out of the Videos tabs
      Edits here apply instantly — no re-sync needed.
      hide: posts with any of these hashtags never show.
      Hide or rename one post: edit it in social/feed.json
@@ -43,28 +41,28 @@ export default {
     limit: 80,                         // newest N TikToks to keep per sync
     instagramLimit: 600,               // Instagram: pull the whole history
     sort: [
-      { id: "timelapse", title: "Timelapses", color: "#c6ff00", inPaintings: true,
+      { id: "timelapse", title: "Timelapses", color: "#c6ff00",
         match: ["timelapse", "speedpaint", "speedpainting", "arttimelapse", "drawingtimelapse", "paintingtimelapse"],
         phrases: ["drawing timelapse", "painting timelapse", "drawing stream"] },
       { id: "flips", title: "Sketchbook flips", color: "#a77bff",
         match: ["sketchbooktour", "flipthrough", "sketchbookflip"],
         phrases: ["completed this sketchbook", "in its entirety", "first part", "part 2", "flip through"] },
       // digital comes before sketchbook: old Procreate posts also carry #sketch / #doodle
-      { id: "digital", title: "Digital", color: "#ff8a00", gallery: "Digital art", blurb: "Procreate & digital pieces, covers and commissions.",
+      { id: "digital", title: "Digital", color: "#ff8a00",
         match: ["procreate", "procreateart", "digitalart", "digitaldrawing", "digitalpainting", "digitalartist",
                 "digitalillustration", "ibispaint", "pixelart", "picocad", "3drender", "adobeillustrator", "albumcover"] },
       { id: "sketchbook", title: "Sketchbook", color: "#00e0ff",
         match: ["sketchbook", "acrylicmarker", "acrylicmarkers", "posca", "marker", "sketch", "doodle", "scrawlvember", "inktober"] },
-      { id: "paintings", title: "Paintings", color: "#ff3ea5", inPaintings: true, gallery: "Paintings from the feed", blurb: "Canvas pieces and art battles, from the feed.",
+      { id: "paintings", title: "Paintings", color: "#ff3ea5",
         match: ["acrylicpainting", "oilpainting", "painting", "canvas", "artbattle", "gouache", "watercolor"] },
-      { id: "drawings", title: "Drawings", color: "#f6f3ec", gallery: "Drawings", blurb: "Ink, pencil and tattoo flash.",
+      { id: "drawings", title: "Drawings", color: "#f6f3ec",
         match: ["drawing", "drawings", "illustration", "ink", "pencil", "charcoal", "pen", "traditionalart", "fanart", "sbr", "jojo", "tattoo", "tattooflash"] },
       { id: "wearables", title: "Custom shirts", color: "#c6ff00",
         match: ["customshirt", "customclothing", "diycustomshirt", "customtshirts", "customtshirt", "handpainted"] },
-      { id: "photography", title: "Photography", color: "#00e0ff", gallery: "Photography", blurb: "Concerts, nights out and everything in between.",
+      { id: "photography", title: "Photography", color: "#00e0ff",
         match: ["photography", "photo", "film", "filmphotography", "35mm", "super8", "streetphotography", "portraitphotography",
                 "photographer", "shotoniphone", "filmbros", "naturephotography"] },
-      { id: "poetry", title: "Poetry", color: "#f6f3ec",
+      { id: "poetry", title: "Poetry", color: "#f6f3ec", videos: false,   // poems live in Work → Poetry, not Videos
         match: ["poetry", "poem", "poems", "poet", "spokenword", "writing"] },
       // anything left from Instagram (TikToks without a match stay off the site)
       { id: "instagram", title: "More from Instagram", color: "#a77bff", platform: "instagram", match: "*" },
@@ -120,12 +118,30 @@ export default {
     colorChangeSeconds: 3.2,
   },
 
+  /* ---------- Work ----------
+     One Cover Flow carousel per skill, in this order. Each pulls the
+     pictures from the feed sections above (from: [...]; "id@instagram" or
+     "id@tiktok" takes only that platform's posts). paintings: true also adds
+     the hand-picked series below. Videos stay in the Videos section, and a
+     piece posted twice (video + photo) shows once.                         */
+  work: [
+    { id: "drawings",    title: "Drawings",    color: "#f6f3ec", blurb: "Ink, pencil, marker and tattoo flash.",
+      from: ["drawings", "sketchbook@instagram"] },
+    { id: "digital",     title: "Digital art", color: "#ff8a00", blurb: "Procreate pieces, album covers and commissions.",
+      from: ["digital"] },
+    { id: "paintings",   title: "Paintings",   color: "#ff3ea5", blurb: "Acrylic marker and canvas, plus the finished pieces from my timelapses.",
+      paintings: true, from: ["paintings", "timelapse", "sketchbook@tiktok"] },
+    { id: "photography", title: "Photography", color: "#00e0ff", blurb: "Shows, nights out and everything in between.",
+      from: ["photography"] },
+    { id: "poetry",      title: "Poetry",      color: "#0d0d0d", blurb: "Words, sometimes with pictures. Tap one to read it.",
+      poetry: true, from: ["poetry"] },
+  ],
+
   /* ---------- Paintings ----------
      Each entry is a "series". Every series gets its own colour, and
      switching between series plays a paint-splash transition.
      items: one per painting. Only `image` and `title` are required.      */
-  // "Fresh from the feed" (your latest TikTok pieces) is added automatically
-  // as the first series — see social.sort → inPaintings.
+  // Hand-picked series; they show in Work → Paintings (work → paintings: true).
   paintings: [
     {
       id: "canvas",

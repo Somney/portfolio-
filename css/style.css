@@ -103,9 +103,25 @@ section, footer { position: relative; }
 }
 @keyframes marquee { to { transform: translateX(-50%); } }
 
-/* ---------- paintings ---------- */
-.paintings { min-height: 100svh; overflow: hidden; color: var(--sec-ink, var(--ink)); padding-bottom: 60px; }
-.paintings > *:not(canvas) { position: relative; z-index: 2; }
+/* ---------- work: one carousel per skill ---------- */
+.work { background: var(--paper); color: var(--ink); }
+.work-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.work-nav .series-tab { text-decoration: none; color: inherit; }
+.work__list { margin-top: 28px; }
+.wsec { background: var(--wbg); color: var(--sec-ink, var(--ink)); padding: 84px 0 46px; overflow: hidden; scroll-margin-top: 0; }
+.wsec__flow { margin-top: 22px; }
+.wsec + .wsec { border-top: 3px solid var(--ink); }
+.wsec__head { position: relative; z-index: 3; padding: 0 var(--gutter); display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; }
+.wsec__title { font-family: var(--display); font-weight: 400; margin: 0; text-transform: uppercase; line-height: .9; font-size: clamp(30px, 6vw, 76px); }
+.wsec__blurb { margin: 0; font-size: 16px; font-weight: 500; }
+.wsec__blurb b { opacity: .6; font-weight: 700; margin-left: 4px; }
+.wsec .coverflow { height: clamp(280px, 44vh, 460px); }
+.wsec .cf-item { width: clamp(150px, min(26vw, 30vh), 290px); }
+.wsec .cf-caption { padding-top: 34px; }
+.wsec .cf-arrow { background: var(--sec-ink, var(--ink)); color: var(--wbg); }
+.wsec .cf-item.is-active { box-shadow: 0 0 0 4px var(--sec-ink, var(--ink)), 0 30px 60px rgba(0,0,0,.35); }
+.lb-poem { max-height: 32svh; overflow: auto; text-align: left; justify-self: center; width: min(560px, 100%); font-size: 15px; line-height: 1.55;
+  background: rgba(255,255,255,.06); padding: 12px 16px; border-radius: 12px; margin-top: 4px; overscroll-behavior: contain; touch-action: pan-y; }
 .series-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .series-tab {
   border: 2px solid var(--ink); background: var(--paper); color: var(--ink); border-radius: 999px;
