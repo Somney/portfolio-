@@ -574,15 +574,15 @@ async function buildBook(b) {
   const aPage = rr ? cornerAlpha(rr / W, H / W) : null, aCover = rr ? cornerAlpha((rr * 1.015) / (W * 1.015), (H * 1.02) / (W * 1.015)) : null;
   leaves.push(makeLeaf(W * 1.015, H * 1.02, cover, prep(new THREE.CanvasTexture(endpaperCanvas(b.inside || b.color, b.endpaper === false ? { id: b.id, plain: true } : b.id))), true, aCover));
   // paper: placeholder paper first, swap to real image when it arrives
+  // Page pictures are loaded only for the sheets near the open spread (see syncPages):
+  // a whole book's photos can be 500 MB of graphics memory, more than many laptops have.
+  const paper = paperTex();
   for (let k = 0; k < sheets; k++) {
-    const leaf = makeLeaf(W, H, prep(new THREE.CanvasTexture(paperCanvas())), prep(new THREE.CanvasTexture(paperCanvas())), false, aPage);
+    const leaf = makeLeaf(W, H, paper, paper, false, aPage);
     leaves.push(leaf);
     const fi = 2 * k, bi = 2 * k + 1;
-    pageTex(fi, k + 1, "front").then((t) => { leaf.front.material.map.dispose(); leaf.front.material.map = t; leaf.front.material.needsUpdate = true; });
-    (bi < P ? pageTex(bi, k + 1, "back") : Promise.resolve(prep(new THREE.CanvasTexture(paperCanvas())))).then((t) => {
-      t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1;
-      leaf.back.material.map.dispose(); leaf.back.material.map = t; leaf.back.material.needsUpdate = true;
-    });
+    leaf.pages = { front: () => pageTex(fi, k + 1, "front"), back: bi < P ? () => pageTex(bi, k + 1, "back") : null };
+    leaf.texState = 0; leaf.gen = 0;
   }
   // ---- thickness: the book always has its real thickness (content.js → thickness);
   // pages not uploaded yet are a block of blank paper riding on the back cover ----
@@ -645,11 +645,56 @@ async function buildBook(b) {
   return { leaves, P };
 }
 
+// one shared blank-paper texture for every sheet that isn't showing its picture
+let PAPER = null;
+function paperTex() {
+  if (!PAPER) {
+    const c = document.createElement("canvas"); c.width = 64; c.height = 88;
+    const g = c.getContext("2d"); g.fillStyle = "#f3efe4"; g.fillRect(0, 0, 64, 88);
+    PAPER = prep(new THREE.CanvasTexture(c)); PAPER.userData.shared = true;
+  }
+  return PAPER;
+}
+const freeMap = (t) => { if (t && !t.userData?.shared) t.dispose(); };
+function setMap(mat, t, mirror) {
+  if (mirror && !t.userData?.shared) { t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1; }
+  freeMap(mat.map); mat.map = t; mat.needsUpdate = true;
+}
+// keep pictures loaded for the sheets within a few turns of the open spread, free the rest
+const PAGE_WINDOW = 3;
+function syncPages() {
+  if (!V?.leaves.length) return;
+  const n = turnedCount(), L = V.leaves.length;
+  for (let i = 1; i < L - 1; i++) {
+    const lf = V.leaves[i];
+    if (!lf.pages) continue;
+    const want = Math.abs(i - n) <= PAGE_WINDOW || Math.abs(i - (n - 1)) <= PAGE_WINDOW;
+    if (want && lf.texState === 0) {
+      lf.texState = 1; const gen = ++lf.gen;
+      for (const side of ["front", "back"]) {
+        const load = lf.pages[side];
+        if (!load) continue;
+        load().then((t) => {
+          if (lf.gen !== gen || !V.leaves.includes(lf)) { freeMap(t); dropLayers(lf, side); return; }
+          setMap(lf[side].material, t, side === "back");
+        });
+      }
+    } else if (!want && lf.texState) {
+      lf.texState = 0; lf.gen++;
+      for (const side of ["front", "back"]) { setMap(lf[side].material, paperTex(), false); dropLayers(lf, side); }
+    }
+  }
+}
+function dropLayers(lf, side) {
+  const i = V.leaves.indexOf(lf);
+  V.layers = V.layers.filter((L) => !(L.leafIdx === i && L.side === side));
+}
+
 function disposeBook() {
   for (const lf of V.leaves) {
     V.book.remove(lf.group);
-    lf.geo.dispose();
-    for (const m of [lf.front.material, lf.back.material]) { m.map?.dispose(); m.dispose(); }
+    lf.geo.dispose(); lf.gen = (lf.gen || 0) + 1;
+    for (const m of [lf.front.material, lf.back.material]) { freeMap(m.map); m.dispose(); }
     if (lf.slab) { lf.slab.geometry.dispose(); lf.slabMats.forEach((m) => m.dispose()); }
   }
   for (const m of V.blocks || []) { V.book.remove(m); m.geometry.dispose(); }
@@ -822,6 +867,7 @@ function updateCount() {
     txt = pages.length ? `p. ${pages.join("–")} <i>/ ${P}</i>` : "inside cover";
   }
   $(".viewer__count", V.root).innerHTML = txt;
+  syncPages();
   const id = V.bookData.id;
   history.replaceState(null, "", `#sketchbook/${id}${n ? "/" + n : ""}`);
 }
