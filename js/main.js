@@ -38,6 +38,22 @@ if (fresh.length) paintings.unshift({
   items: fresh.map((p) => ({ title: p.title || "Untitled", year: p.date?.slice(0, 4), medium: tagLine(p), image: p.art || p.image, post: p })),
 });
 
+// sections marked gallery: "<title>" also get their own Cover Flow series (one card per piece:
+// Instagram often has a video + a picture of the same piece, keep the picture)
+for (const b of buckets.filter((b) => b.gallery)) {
+  const seen = new Set(), items = [];
+  for (const p of [...b.posts].sort((x, y) => (x.video ? 1 : 0) - (y.video ? 1 : 0) || (y.date || "").localeCompare(x.date || ""))) {
+    const key = (p.title || p.id).toLowerCase().replace(/[^a-z0-9]+/g, "") || p.id;
+    if (seen.has(key) || !(p.art || p.image)) continue;
+    seen.add(key); items.push(p);
+  }
+  items.sort((x, y) => (y.date || "").localeCompare(x.date || ""));
+  if (items.length) paintings.push({
+    id: "g-" + b.id, title: b.gallery, color: b.color, ink: contrastOn(b.color, INK, PAPER),
+    blurb: b.blurb || "", items: items.slice(0, b.galleryLimit || 60).map((p) => ({ title: p.title || "Untitled", year: p.date?.slice(0, 4), medium: tagLine(p), image: p.art || p.image, post: p })),
+  });
+}
+
 /* ---------- Theme + text ---------- */
 const root = document.documentElement.style;
 root.setProperty("--ink", INK);
@@ -99,7 +115,7 @@ $(".hero").addEventListener("click", (e) => {
 });
 
 /* ---------- Marquee ---------- */
-const mq = ["PAINTINGS", "✦", "SKETCHBOOKS", "✦", "EXTRAS", "✦", artist.name.toUpperCase(), "★", ...(artist.slogan ? [artist.slogan.toUpperCase(), "★"] : [])].join("  ");
+const mq = ["PAINTINGS", "✦", "DIGITAL", "✦", "PHOTOGRAPHY", "✦", "SKETCHBOOKS", "✦", "EXTRAS", "✦", artist.name.toUpperCase(), "★", ...(artist.slogan ? [artist.slogan.toUpperCase(), "★"] : [])].join("  ");
 $(".marquee__track").textContent = `${mq}  ${mq}  ${mq}  ${mq}  `;
 
 /* ---------- Lightbox ---------- */
@@ -504,7 +520,7 @@ function socialEmbed(url = "") {
 /* ---------- Section navigation with splash transitions ---------- */
 const SECTIONS = [
   { id: "home", label: "Home", color: () => PAL[heroIdx] },
-  { id: "paintings", label: "Paintings", color: () => paintings[series]?.color || PAL[0] },
+  { id: "paintings", label: "Work", color: () => paintings[series]?.color || PAL[0] },
   ...(buckets.length ? [{ id: "videos", label: "Videos", color: () => buckets[0].color || PAL[0] }] : []),
   { id: "sketchbooks", label: "Sketchbooks", color: () => INK, ink: () => PAL[1] },
   { id: "extras", label: "Extras", color: () => PAPER },

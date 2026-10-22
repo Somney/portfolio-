@@ -32,6 +32,7 @@ export default {
                           so personal posts stay off the portfolio)
        inPaintings: true  also show these covers in Paintings as the
                           "Fresh from the feed" series
+       gallery: "Title"   give this section its own Cover Flow tab in Paintings
      Edits here apply instantly — no re-sync needed.
      hide: posts with any of these hashtags never show.
      Hide or rename one post: edit it in social/feed.json
@@ -48,16 +49,27 @@ export default {
       { id: "flips", title: "Sketchbook flips", color: "#a77bff",
         match: ["sketchbooktour", "flipthrough", "sketchbookflip"],
         phrases: ["completed this sketchbook", "in its entirety", "first part", "part 2", "flip through"] },
+      // digital comes before sketchbook: old Procreate posts also carry #sketch / #doodle
+      { id: "digital", title: "Digital", color: "#ff8a00", gallery: "Digital art", blurb: "Procreate & digital pieces, covers and commissions.",
+        match: ["procreate", "procreateart", "digitalart", "digitaldrawing", "digitalpainting", "digitalartist",
+                "digitalillustration", "ibispaint", "pixelart", "picocad", "3drender", "adobeillustrator", "albumcover"] },
       { id: "sketchbook", title: "Sketchbook", color: "#00e0ff",
         match: ["sketchbook", "acrylicmarker", "acrylicmarkers", "posca", "marker", "sketch", "doodle", "scrawlvember", "inktober"] },
-      { id: "paintings", title: "Paintings", color: "#ff3ea5", inPaintings: true,
+      { id: "paintings", title: "Paintings", color: "#ff3ea5", inPaintings: true, gallery: "Paintings from the feed", blurb: "Canvas pieces and art battles, from the feed.",
         match: ["acrylicpainting", "oilpainting", "painting", "canvas", "artbattle", "gouache", "watercolor"] },
-      { id: "digital", title: "Digital", color: "#ff8a00",
-        match: ["procreate", "digitalart", "fanart", "illustration", "drawing", "drawings", "sbr", "jojo"] },
-      // Instagram art that has no hashtags lands here (TikToks without a match stay off the site)
-      { id: "instagram", title: "Instagram", color: "#a77bff", platform: "instagram", match: "*" },
+      { id: "drawings", title: "Drawings", color: "#f6f3ec", gallery: "Drawings", blurb: "Ink, pencil and tattoo flash.",
+        match: ["drawing", "drawings", "illustration", "ink", "pencil", "charcoal", "pen", "traditionalart", "fanart", "sbr", "jojo", "tattoo", "tattooflash"] },
+      { id: "wearables", title: "Custom shirts", color: "#c6ff00",
+        match: ["customshirt", "customclothing", "diycustomshirt", "customtshirts", "customtshirt", "handpainted"] },
+      { id: "photography", title: "Photography", color: "#00e0ff", gallery: "Photography", blurb: "Concerts, nights out and everything in between.",
+        match: ["photography", "photo", "film", "filmphotography", "35mm", "super8", "streetphotography", "portraitphotography",
+                "photographer", "shotoniphone", "filmbros", "naturephotography"] },
+      { id: "poetry", title: "Poetry", color: "#f6f3ec",
+        match: ["poetry", "poem", "poems", "poet", "spokenword", "writing"] },
+      // anything left from Instagram (TikToks without a match stay off the site)
+      { id: "instagram", title: "More from Instagram", color: "#a77bff", platform: "instagram", match: "*" },
     ],
-    hide: ["poetry", "corecore", "fitnessmotivation", "weightloss", "costume", "halloween", "memories", "vrmod"],
+    hide: ["corecore", "fitnessmotivation", "weightloss", "costume", "halloween", "memories", "vrmod"],
   },
 
   /* ---------- Background music ----------
