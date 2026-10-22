@@ -67,6 +67,7 @@ export default {
       // anything left from Instagram (TikToks without a match stay off the site)
       { id: "instagram", title: "More from Instagram", color: "#a77bff", platform: "instagram", match: "*" },
     ],
+    keep: ["poetry"],                  // these tags beat hide (poems tagged #corecore still show)
     hide: ["corecore", "fitnessmotivation", "weightloss", "costume", "halloween", "memories", "vrmod"],
   },
 
@@ -133,8 +134,8 @@ export default {
       paintings: true, from: ["paintings", "timelapse", "sketchbook@tiktok"] },
     { id: "photography", title: "Photography", color: "#00e0ff", blurb: "Shows, nights out and everything in between.",
       from: ["photography"] },
-    { id: "poetry",      title: "Poetry",      color: "#0d0d0d", blurb: "Words, sometimes with pictures. Tap one to read it.",
-      poetry: true, from: ["poetry"] },
+    { id: "poetry",      title: "Poetry",      color: "#0d0d0d", blurb: "Words, sometimes with pictures. Tap one to read or play it.",
+      poetry: true, videos: true, from: ["poetry"] },
   ],
 
   /* ---------- Paintings ----------

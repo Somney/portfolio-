@@ -396,7 +396,7 @@ await manualLinks(tt);
 
 const { sortPosts } = await import("../js/social-sort.js");
 if (!fixture && !args.includes("--no-art")) {
-  const forPaintings = sortPosts([...posts.values()], cfg.sort || [], { hide: cfg.hide || [] })
+  const forPaintings = sortPosts([...posts.values()], cfg.sort || [], { hide: cfg.hide || [], keep: cfg.keep || [] })
     .filter((b) => b.inPaintings).flatMap((b) => b.posts);
   const todo = forPaintings.filter((p) => !p.art && !p.artLocked && (p.artFails || 0) < 3);
   if (todo.length) log(`Finding finished-artwork images for ${todo.length} post(s)…`);
@@ -435,7 +435,7 @@ if (JSON.stringify({ ...out, updated: null }) !== before) await fs.writeFile(FEE
 else log("No changes.");
 
 // summary of how posts sort with the current rules (same logic as the site)
-const buckets = sortPosts(list, cfg.sort || [], { hide: cfg.hide || [] });
+const buckets = sortPosts(list, cfg.sort || [], { hide: cfg.hide || [], keep: cfg.keep || [] });
 log(`Saved ${list.length} post(s): +${report.added} new, ${report.updated} refreshed.`);
 for (const b of buckets) log(`  ${b.title}: ${b.posts.length}`);
 if (process.env.GITHUB_STEP_SUMMARY) {

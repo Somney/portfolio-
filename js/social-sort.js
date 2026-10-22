@@ -22,8 +22,9 @@ export function matches(post, rule) {
   return false;
 }
 
-export function sortPosts(posts, rules = [], { hide = [] } = {}) {
-  const visible = posts.filter((p) => !p.hidden && !(hide.length && matches(p, { match: hide })));
+// keep: tags that override hide (e.g. a #poetry post also tagged #corecore still shows)
+export function sortPosts(posts, rules = [], { hide = [], keep = [] } = {}) {
+  const visible = posts.filter((p) => !p.hidden && !(hide.length && matches(p, { match: hide }) && !(keep.length && matches(p, { match: keep }))));
   const buckets = rules.map((r) => ({ ...r, posts: [] }));
   const rests = buckets.filter((b) => b.match === "*");   // catch-alls (optionally per platform)
   for (const p of visible) {

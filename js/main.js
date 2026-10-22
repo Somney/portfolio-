@@ -15,7 +15,7 @@ const INK = theme.ink, PAPER = theme.paper, PAL = theme.palette;
 
 /* ---------- Social feed (written daily by the GitHub Action) ---------- */
 const feed = await fetch("social/feed.json", { credentials: "same-origin", mode: "cors" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-const buckets = sortPosts(feed?.posts || [], social.sort || [], { hide: social.hide || [] }).filter((b) => b.posts.length);
+const buckets = sortPosts(feed?.posts || [], social.sort || [], { hide: social.hide || [], keep: social.keep || [] }).filter((b) => b.posts.length);
 const tagLine = (p, n = 3) => (p.tags || []).slice(0, n).map((t) => "#" + t).join(" ");
 const platformName = (p) => (p.platform === "instagram" ? "Instagram" : "TikTok");
 const fmtDate = (d) => { try { return new Date(d).toLocaleDateString(undefined, { month: "short", year: "numeric" }); } catch { return ""; } };
@@ -164,7 +164,7 @@ function workPieces(w) {
   }
   // from: ["digital", "sketchbook@instagram"] — a feed section, optionally only one platform's posts
   const posts = (w.from || []).flatMap((f) => { const [id, plat] = f.split("@"); return (buckets.find((b) => b.id === id)?.posts || []).filter((p) => !plat || p.platform === plat); })
-    .filter((p) => p.art || (!p.video && p.image) || p.images?.length)       // pictures only; videos live in Videos
+    .filter((p) => p.art || (!p.video && p.image) || p.images?.length || (w.videos && p.image))   // pictures (videos live in Videos unless the section takes them)
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   for (const p of posts) { const k = keyOf(p); if (seen.has(k)) continue; seen.add(k); out.push(postPiece(p)); }
   return out;
@@ -176,7 +176,8 @@ function slidesFor(w, pieces) {
     pc.images.forEach((src, k) => {
       const p = pc.post, n = pc.images.length;
       const text = "";
-      slides.push({ kind: "image", src, title: pc.title, color: w.color,
+      const play = p && (p.platform === "tiktok" || p.video) && !p.art && embedSrc(p);   // a video piece plays in place
+      slides.push({ kind: play ? "embed" : "image", post: p, src, title: pc.title, color: w.color,
         caption: `<strong>${esc(pc.title)}</strong><span>${esc(pc.meta)}${n > 1 ? ` · photo ${k + 1} of ${n}` : ""}</span>` +
           (pc.item?.note ? `<em class="lb-note">${esc(pc.item.note)}</em>` : "") + text +
           (p ? postLink(p) : pc.item?.link ? `<a class="lb-link" href="${esc(pc.item.link)}" target="_blank" rel="noopener">${/tiktok/.test(pc.item.link) ? "Watch on TikTok" : "View on Instagram"} ↗</a>` : "") });
@@ -423,9 +424,9 @@ function socialEmbed(url = "") {
 /* ---------- Section navigation with splash transitions ---------- */
 const SECTIONS = [
   { id: "home", label: "Home", color: () => PAL[heroIdx] },
+  { id: "sketchbooks", label: "Sketchbooks", color: () => INK, ink: () => PAL[1] },
   ...workSecs.map(({ w, sec }) => ({ id: sec.id, label: w.title, color: () => w.color })),
   ...(vBuckets.length ? [{ id: "videos", label: "Videos", color: () => vBuckets[0].color || PAL[0] }] : []),
-  { id: "sketchbooks", label: "Sketchbooks", color: () => INK, ink: () => PAL[1] },
   { id: "extras", label: "Extras", color: () => PAPER },
   { id: "contact", label: "Contact", color: () => PAL[1 % PAL.length] },
 ];
@@ -450,7 +451,14 @@ let ipIdx = 0;
 SECTIONS.forEach((s) => ipList.append(el("li", "", `<span>${s.label}</span><b>›</b>`)));
 const ipItems = $$("li", ipList);
 ipItems.forEach((li, i) => (li.onclick = () => { ipIdx = i; ipRender(); ipSelect(); }));
-function ipRender() { ipItems.forEach((li, i) => li.classList.toggle("on", i === ipIdx)); }
+function ipRender() {
+  ipItems.forEach((li, i) => li.classList.toggle("on", i === ipIdx));
+  // the screen shows ~6 rows: scroll the list so the highlighted row stays on screen, like a real iPod
+  const li = ipItems[ipIdx];
+  if (li.offsetTop < ipList.scrollTop) ipList.scrollTop = li.offsetTop;
+  else if (li.offsetTop + li.offsetHeight > ipList.scrollTop + ipList.clientHeight) ipList.scrollTop = li.offsetTop + li.offsetHeight - ipList.clientHeight;
+  ipList.classList.toggle("more", ipList.scrollTop + ipList.clientHeight < ipList.scrollHeight - 2);
+}
 function ipMove(d) { const n = clamp(ipIdx + d, 0, ipItems.length - 1); if (n !== ipIdx) { ipIdx = n; blip(2000); ipRender(); } }
 function ipOpen() {
   const here = SECTIONS.findIndex((s) => { const r = document.getElementById(s.id).getBoundingClientRect(); return r.top <= innerHeight / 2 && r.bottom > innerHeight / 2; });
