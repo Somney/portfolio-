@@ -120,7 +120,7 @@ export default {
       ink: "#0d0d0d",
       items: [
         // note (optional): a line shown when the painting is opened full-screen
-        { title: "Cyclepath", medium: "Acrylic on canvas", image: "assets/paintings/cyclepath.jpg",
+        { title: "Cyclepath", year: 2026, medium: "Acrylic on canvas", size: "5 × 7 in", image: "assets/paintings/cyclepath.jpg",
           note: "hell no i aint cycle" },
       ],
     },
