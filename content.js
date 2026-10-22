@@ -39,7 +39,8 @@ export default {
   social: {
     tiktok: "lifeofseif",
     instagram: "furballtbb",
-    limit: 80,                         // newest N posts to keep per sync
+    limit: 80,                         // newest N TikToks to keep per sync
+    instagramLimit: 600,               // Instagram: pull the whole history
     sort: [
       { id: "timelapse", title: "Timelapses", color: "#c6ff00", inPaintings: true,
         match: ["timelapse", "speedpaint", "speedpainting", "arttimelapse", "drawingtimelapse", "paintingtimelapse"],

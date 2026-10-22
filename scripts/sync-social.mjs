@@ -31,6 +31,7 @@ const fixture = args.includes("--fixture") ? args[args.indexOf("--fixture") + 1]
 const { default: content } = await import(path.join(ROOT, "content.js"));
 const cfg = content.social || {};
 const LIMIT = cfg.limit || 80;
+const IG_LIMIT = cfg.instagramLimit || 600;   // Instagram: whole history (older work lives there)
 const log = (...a) => console.log("•", ...a);
 const warn = (...a) => console.warn("⚠", ...a);
 
@@ -308,14 +309,16 @@ async function syncInstagram(token) {
     await getJSON(`https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`, 1).catch(() => {});
     let url = `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit=50&access_token=${token}`;
     let n = 0;
-    while (url && n < LIMIT) {
+    while (url && n < IG_LIMIT) {
       const page = await getJSON(url);
       for (const m of page.data || []) {
-        if (n++ >= LIMIT) break;
+        if (n++ >= IG_LIMIT) break;
         report.discovered++;
         const src = m.media_type === "VIDEO" ? m.thumbnail_url : m.media_url;
         let image = null;
-        if (src) { try { image = await download(src, `${MEDIA}/instagram/${m.id}.jpg`); } catch (e) { warn(`IG image ${m.id}: ${e.message}`); } }
+        const have = posts.get(`instagram:${m.id}`)?.image;
+        if (have && await fs.stat(path.join(ROOT, have)).then(() => true, () => false)) image = have;   // already saved
+        else if (src) { try { image = await download(src, `${MEDIA}/instagram/${m.id}.jpg`); } catch (e) { warn(`IG image ${m.id}: ${e.message}`); } }
         upsert({ platform: "instagram", id: m.id, url: m.permalink, caption: m.caption || "", title: cleanTitle(m.caption || ""),
           date: m.timestamp ? new Date(m.timestamp).toISOString() : null, image, video: m.media_type === "VIDEO" });
       }

@@ -132,14 +132,17 @@ function openLightbox(list, i) {
   if (list[i]?.kind === "embed" || list[i]?.kind === "video") music?.hold(true);
   lbList = list; lbIdx = i; lbShow();
   lb.hidden = false; requestAnimationFrame(() => lb.classList.add("open"));
+  document.body.classList.add("no-scroll");                     // the page behind stays put
 }
 function closeLightbox() {
   music?.hold(false);
   lb.classList.remove("open");
+  if ($(".viewer")?.hidden !== false) document.body.classList.remove("no-scroll");
   setTimeout(() => { lb.hidden = true; $(".lb-media", lb).innerHTML = ""; }, 250);
 }
 $(".lb-close", lb).onclick = closeLightbox;
 lb.addEventListener("click", (e) => { if (e.target === lb) closeLightbox(); });
+lb.addEventListener("wheel", (e) => e.preventDefault(), { passive: false });   // no scrolling the page behind
 $(".lb-prev", lb).onclick = () => { lbIdx = (lbIdx - 1 + lbList.length) % lbList.length; lbShow(); };
 $(".lb-next", lb).onclick = () => { lbIdx = (lbIdx + 1) % lbList.length; lbShow(); };
 addEventListener("keydown", (e) => {
