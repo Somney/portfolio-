@@ -113,6 +113,18 @@ export default {
   // as the first series — see social.sort → inPaintings.
   paintings: [
     {
+      id: "canvas",
+      title: "On canvas",
+      blurb: "Acrylic paintings on stretched canvas.",
+      color: "#ff8a00",
+      ink: "#0d0d0d",
+      items: [
+        // note (optional): a line shown when the painting is opened full-screen
+        { title: "Cyclepath", medium: "Acrylic on canvas", image: "assets/paintings/cyclepath.jpg",
+          note: "Yes, cycle. Aldo & Martin stream: “you’re a psychopath” — “hell no, I ain’t cycle.”" },
+      ],
+    },
+    {
       id: "sketchbook-01",
       title: "Sketchbook 01 — selects",
       blurb: "Favourite pages from the September–October sketchbook.",

@@ -168,6 +168,7 @@ function seriesItems(s) {
   return s.items.map((it) => ({
     kind: "image", src: it.image, title: it.title, color: s.color,
     caption: `<strong>${esc(it.title)}</strong><span>${[it.year, it.medium, it.size].filter(Boolean).map(esc).join(" · ")}</span>` +
+      (it.note ? `<em class="lb-note">${esc(it.note)}</em>` : "") +
       (it.link ? `<a class="lb-link" href="${esc(it.link)}" target="_blank" rel="noopener">${/tiktok/.test(it.link) ? "Watch on TikTok" : "View on Instagram"} ↗</a>` : ""),
   }));
 }
