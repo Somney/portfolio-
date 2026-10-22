@@ -121,7 +121,7 @@ export default {
       items: [
         // note (optional): a line shown when the painting is opened full-screen
         { title: "Cyclepath", medium: "Acrylic on canvas", image: "assets/paintings/cyclepath.jpg",
-          note: "Yes, cycle. Aldo & Martin stream: “you’re a psychopath” — “hell no, I ain’t cycle.”" },
+          note: "hell no i aint cycle" },
       ],
     },
     {
