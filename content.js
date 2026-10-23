@@ -12,9 +12,9 @@ export default {
   /* ---------- About you ---------- */
   artist: {
     name: "Fury Blade Seif",               // big name in the hero + browser tab
-    tagline: "acrylic marker paintings · sketchbooks · timelapses",
+    tagline: "paintings · drawings · digital art · photography · poetry · sketchbooks",
     slogan: "live life, live forever",
-    bio: "Fury Blade Seif paints in acrylic marker, mostly in sketchbooks, often live on stream, one page at a time.",
+    bio: "Fury Blade Seif paints, draws, designs, shoots and writes, mostly in sketchbooks, often live on stream, one page at a time.",
     email: "sonofsomney@gmail.com",
     socials: [
       { label: "Instagram", url: "https://www.instagram.com/furballtbb/" },
@@ -116,7 +116,7 @@ export default {
      Leave as null to use the animated dancing figure.                     */
   hero: {
     silhouetteImage: null,
-    words: ["PAINT", "SKETCH", "REPEAT"],   // the words that rotate under your name
+    words: ["PAINT", "SKETCH", "DRAW", "DESIGN", "PHOTOGRAPH", "WRITE", "REPEAT"],   // the words that rotate under your name
     colorChangeSeconds: 3.2,
   },
 
