@@ -487,3 +487,4 @@ body::after {
 /* the serif reads a bit small next to the old fonts: semibold by default, a touch larger */
 body { font-weight: 500; font-size: 17px; }
 .marquee__track, .feed-card__kicker, .contact__slogan, .contact__email, .viewer__count, .agegate__tag, .agegate__in, .x-media--glyph span { font-weight: 600; }
+.marquee { display: none; }   /* scrolling text bar under the hero: removed */

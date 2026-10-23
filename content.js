@@ -141,7 +141,7 @@ export default {
               "photographer", "shotoniphone", "filmbros", "naturephotography"] },
     { id: "paintings",   title: "Paintings",   color: "#ff3ea5", blurb: "Canvas pieces, art battles and favourite pages.",
       paintings: true, match: ["painting", "acrylic", "acrylicpainting", "canvas", "artbattle", "gouache", "watercolor", "oilpainting"] },
-    { id: "drawings",    title: "Drawings",    color: "#f6f3ec", blurb: "Ink, pencil crayon, Copic, tattoo flash and hand-drawn shirts.",
+    { id: "drawings",    title: "Drawings", expandAll: true, color: "#f6f3ec", blurb: "Ink, pencil crayon, Copic, tattoo flash and hand-drawn shirts.",
       match: ["drawing", "drawings", "illustration", "ink", "pencil", "charcoal", "pen", "traditionalart", "fanart", "tattoo",
               "tattooflash", "sketch", "doodle", "customshirt", "customclothing", "handdrawn"] },
   ],
