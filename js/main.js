@@ -25,8 +25,9 @@ function embedSrc(p, autoplay = false) {
   return m ? `https://www.instagram.com/${m[1]}/${m[2]}/embed/captioned/` : null;
 }
 const postLink = (p) => `<a class="lb-link" href="${esc(p.url)}" target="_blank" rel="noopener">${p.platform === "instagram" ? "View on Instagram" : "Watch on TikTok"} ↗</a>`;
+// Instagram videos play from the file itself (Instagram's embed often won't play them)
 const postLightbox = (posts, color) => posts.map((p) => ({
-  kind: "embed", post: p, src: p.image, title: p.title, color,
+  kind: p.videoUrl ? "video" : "embed", post: p, src: p.videoUrl || p.image, poster: p.image, title: p.title, color,
   caption: `<strong>${esc(p.title || "Untitled")}</strong><span>${esc([fmtDate(p.date), tagLine(p, 6)].filter(Boolean).join(" · "))}</span>${postLink(p)}`,
 }));
 
@@ -110,7 +111,11 @@ function lbShow() {
       const f = el("iframe"); f.src = `https://www.youtube-nocookie.com/embed/${yt[1]}?autoplay=1`;
       f.allow = "autoplay; encrypted-media; picture-in-picture"; f.allowFullscreen = true; media.append(f);
     } else {
-      const v = el("video"); v.src = it.src; v.controls = true; v.autoplay = true; v.playsInline = true; media.append(v);
+      const v = el("video"); v.src = it.src; v.controls = true; v.autoplay = true; v.playsInline = true;
+      if (it.poster) v.poster = it.poster;
+      // link expired / blocked: fall back to Instagram's own player
+      v.onerror = () => { if (it.post && embedSrc(it.post)) { const f = el("iframe", `lb-embed lb-embed--${it.post.platform}`); f.src = embedSrc(it.post, true); f.allowFullscreen = true; v.replaceWith(f); } };
+      media.append(v);
     }
   } else {
     const img = smartImg(it.src, { label: it.title, color: it.color, seed: it.src || it.title });
@@ -194,7 +199,7 @@ function slidesFor(w, pieces) {
       const p = pc.post, n = pc.images.length;
       const text = "";
       const play = p && (p.platform === "tiktok" || p.video) && !p.art && embedSrc(p);   // a video piece plays in place
-      slides.push({ kind: play ? "embed" : "image", post: p, src, title: pc.title, color: w.color,
+      slides.push({ kind: play ? (p.videoUrl ? "video" : "embed") : "image", post: p, src: play && p.videoUrl ? p.videoUrl : src, poster: src, title: pc.title, color: w.color,
         caption: `<strong>${esc(pc.title)}</strong><span>${esc(pc.meta)}${n > 1 ? ` · photo ${k + 1} of ${n}` : ""}</span>` +
           (pc.item?.note ? `<em class="lb-note">${esc(pc.item.note)}</em>` : "") + text +
           (p ? postLink(p) : pc.item?.link ? `<a class="lb-link" href="${esc(pc.item.link)}" target="_blank" rel="noopener">${/tiktok/.test(pc.item.link) ? "Watch on TikTok" : "View on Instagram"} ↗</a>` : "") });

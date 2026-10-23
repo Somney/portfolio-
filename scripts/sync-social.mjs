@@ -334,7 +334,9 @@ async function syncInstagram(token) {
           }
         }
         upsert({ platform: "instagram", id: m.id, url: m.permalink, caption: m.caption || "", title: cleanTitle(m.caption || ""),
-          date: m.timestamp ? new Date(m.timestamp).toISOString() : null, image, images, video: m.media_type === "VIDEO" });
+          date: m.timestamp ? new Date(m.timestamp).toISOString() : null, image, images, video: m.media_type === "VIDEO",
+          // direct video file link (Instagram signs these for a while; refreshed every daily sync)
+          videoUrl: m.media_type === "VIDEO" ? m.media_url : null });
       }
       url = page.paging?.next;
     }
