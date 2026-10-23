@@ -471,9 +471,9 @@ body::after {
 .framed .frame::after { content: ""; display: inline-block; width: .07em; }   /* give back the last letter's squeeze */
 /* pressed by hand: each block a touch crooked, letters a hair off-register from their block,
    ink a little heavier at the edges, rough + speckled through the #ink filter */
-.framed .frame { background: none; position: relative; isolation: isolate; transform: rotate(var(--frot, 0deg)); transform-origin: left center; }
-.framed .frame::before { content: ""; position: absolute; inset: 0; background: var(--fbg); filter: url(#inkBlock); z-index: -1; }
-.framed .frame__ink { display: inline-block; transform: translate(var(--fmx, 0), var(--fmy, 0)); filter: url(#inkText); }
+/* clean, flat, digital blocks; the only "ink" is where letters meet (#inkText) */
+.framed .frame { background: var(--fbg); position: relative; }
+.framed .frame__ink { display: inline-block; filter: url(#inkText); }
 .framed.glitching::before, .framed.glitching::after { display: none; }
 .hero__name.framed { font-size: clamp(80px, min(26vw, 21svh), 270px); }
 .sec-title.framed { font-size: clamp(60px, 13vw, 170px); }

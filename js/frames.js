@@ -29,37 +29,18 @@ export function ensureInk() {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("width", "0"); svg.setAttribute("height", "0"); svg.setAttribute("aria-hidden", "true");
   svg.style.position = "absolute";
-  // inkText: slow liquid warp, then a soft blur pulled back to a hard edge — strokes
-  //          swell and taper and corners melt together, but the outline stays crisp
-  // inkBlock: the colour block gets just the warp, so its edges wobble like a hand-pulled print
+  // inkText: no noise, no warp — the strokes stay clean and digital. A soft blur pulled
+  //   back to a hard edge only changes the shape where strokes meet or crowd each other:
+  //   those inner corners fill in smoothly, like ink pooling where a press squeezes it.
+  //   Straight runs and outer curves keep their exact width (threshold at half alpha).
   svg.innerHTML = `
     <filter id="inkText" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves="1" seed="11" result="flow"/>
-      <feDisplacementMap in="SourceGraphic" in2="flow" scale="3" xChannelSelector="R" yChannelSelector="G" result="warped"/>
-      <!-- thin/thick: patches of the strokes swell, so lines thicken and thin along their length -->
-      <feMorphology in="warped" operator="dilate" radius="1.3" result="thick"/>
-      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="2" seed="5" result="n"/>
-      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -9 4.1" result="mask"/>
-      <feComposite in="thick" in2="mask" operator="in" result="swell"/>
-      <feMerge result="varied"><feMergeNode in="warped"/><feMergeNode in="swell"/></feMerge>
-      <feGaussianBlur in="varied" stdDeviation="1.4" result="soft"/>
-      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9.6"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="soft"/>
+      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 11 -5"/>
     </filter>
     <filter id="inkTextSm" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="1" seed="11" result="flow"/>
-      <feDisplacementMap in="SourceGraphic" in2="flow" scale="1.4" xChannelSelector="R" yChannelSelector="G" result="warped"/>
-      <!-- thin/thick: patches of the strokes swell, so lines thicken and thin along their length -->
-      <feMorphology in="warped" operator="dilate" radius="0.9" result="thick"/>
-      <feTurbulence type="fractalNoise" baseFrequency="0.04 0.07" numOctaves="2" seed="5" result="n"/>
-      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -9 4.1" result="mask"/>
-      <feComposite in="thick" in2="mask" operator="in" result="swell"/>
-      <feMerge result="varied"><feMergeNode in="warped"/><feMergeNode in="swell"/></feMerge>
-      <feGaussianBlur in="varied" stdDeviation="0.6" result="soft"/>
-      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 14 -6"/>
-    </filter>
-    <filter id="inkBlock" x="-3%" y="-6%" width="106%" height="112%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="4" result="flow"/>
-      <feDisplacementMap in="SourceGraphic" in2="flow" scale="1.5" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="soft"/>
+      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 9 -4"/>
     </filter>`;
   document.body.prepend(svg);
 }
