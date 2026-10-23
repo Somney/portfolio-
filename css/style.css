@@ -87,7 +87,7 @@ section, footer { position: relative; }
 .hero__tagline { font-weight: 500; font-size: 18px; margin: 18px 0 0; }
 .hero__tagline:empty { display: none; }
 /* the big name's letters sit a hair right of their box: pull them in so they line up with PORTFOLIO */
-.hero__name { margin-left: -.025em; }
+.hero__name { margin-left: -.02em; }
 .hero__scroll {
   position: absolute; z-index: 2; left: var(--gutter); bottom: 24px; font-weight: 700; text-decoration: none;
   font-size: 13px; letter-spacing: .2em; text-transform: uppercase; animation: bob 1.6s ease-in-out infinite;
