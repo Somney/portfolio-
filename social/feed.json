@@ -153,7 +153,8 @@
         "live",
         "artbattle"
       ],
-      "art": "assets/social/tiktok/7693009323110272264-final.jpg"
+      "art": "assets/social/tiktok/7693009323110272264-final.jpg",
+      "section": "none"
     },
     {
       "platform": "tiktok",
@@ -1283,7 +1284,8 @@
         "sketchbook",
         "acrylicmarker",
         "procreate"
-      ]
+      ],
+      "section": "paintings"
     },
     {
       "platform": "tiktok",
@@ -1829,7 +1831,8 @@
         "pencilsketch",
         "artgallery",
         "artwork"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -2070,7 +2073,8 @@
       ],
       "extraTags": [
         "digitalart"
-      ]
+      ],
+      "section": "photography"
     },
     {
       "platform": "instagram",
@@ -2102,7 +2106,8 @@
       ],
       "extraTags": [
         "digitalart"
-      ]
+      ],
+      "section": "photography"
     },
     {
       "platform": "instagram",
@@ -2142,7 +2147,8 @@
         "assets/social/instagram/17970555650299104-3.jpg",
         "assets/social/instagram/17970555650299104-4.jpg",
         "assets/social/instagram/17970555650299104-5.jpg"
-      ]
+      ],
+      "section": "poetry"
     },
     {
       "platform": "instagram",
@@ -2238,7 +2244,8 @@
       ],
       "extraTags": [
         "digitalart"
-      ]
+      ],
+      "section": "poetry"
     },
     {
       "platform": "instagram",
@@ -8195,7 +8202,8 @@
         "dino_army",
         "ekoluzart",
         "bystarboy"
-      ]
+      ],
+      "section": "digital"
     },
     {
       "platform": "instagram",
@@ -14108,7 +14116,8 @@
       "images": [
         "assets/social/instagram/17892428956433694.jpg",
         "assets/social/instagram/17892428956433694-1.jpg"
-      ]
+      ],
+      "section": "digital"
     },
     {
       "platform": "instagram",
@@ -14138,7 +14147,8 @@
       "images": [
         "assets/social/instagram/17844441376844944.jpg",
         "assets/social/instagram/17844441376844944-1.jpg"
-      ]
+      ],
+      "section": "digital"
     },
     {
       "platform": "instagram",
@@ -14318,7 +14328,8 @@
         "drawing",
         "sketch",
         "doodle"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14342,7 +14353,8 @@
         "ink",
         "pencil",
         "fashion"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14362,7 +14374,8 @@
         "aesthetic",
         "doodle",
         "drawing"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14382,7 +14395,8 @@
         "knife",
         "doodle",
         "aesthetic"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14407,7 +14421,8 @@
         "pencil",
         "ink",
         "pen"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14431,7 +14446,8 @@
         "ruhroh",
         "slav",
         "aesthetic"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14452,7 +14468,8 @@
         "kanyewest",
         "jesusisking",
         "aesthetic"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14474,7 +14491,8 @@
         "dad",
         "sketch",
         "aesthetic"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14499,7 +14517,8 @@
         "pencildrawing",
         "pen",
         "sharpie"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14520,7 +14539,8 @@
         "drawings",
         "papercrafts",
         "inktober2019"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14541,7 +14561,8 @@
         "blackandwhite",
         "doodle",
         "mememan"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14565,7 +14586,8 @@
         "pencil",
         "eraser",
         "youtooz"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14588,7 +14610,8 @@
         "art",
         "blackandwhite",
         "aesthetic"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14608,7 +14631,8 @@
         "doodle",
         "aesthetic",
         "frankocean"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14629,7 +14653,8 @@
         "doodle",
         "ink",
         "flowerboy"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14651,7 +14676,8 @@
         "sketch",
         "doodle",
         "silhouette"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14671,7 +14697,8 @@
         "doodle",
         "dadhats",
         "aesthetic"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14691,7 +14718,8 @@
         "aesthetic",
         "japanese",
         "ink"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14711,7 +14739,8 @@
         "skull",
         "blackandwhite",
         "aesthetic"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14731,7 +14760,8 @@
         "lighter",
         "aesthetic",
         "pencil"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14751,7 +14781,8 @@
         "switch",
         "drake",
         "silhouette"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14772,7 +14803,8 @@
         "vintage",
         "sketch",
         "doodlesketch"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14792,7 +14824,8 @@
         "doodle",
         "canvas",
         "blackandwhite"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14813,7 +14846,8 @@
         "zzz",
         "marker",
         "sharpie"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14835,7 +14869,8 @@
         "sketch",
         "doodle",
         "tylerthecreator"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14855,7 +14890,8 @@
         "pencildrawing",
         "vv",
         "silhouette"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14877,7 +14913,8 @@
         "joker",
         "gamersriseup",
         "doodle"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14898,7 +14935,8 @@
         "art",
         "sketch",
         "blackandwhite"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14917,7 +14955,8 @@
         "blackandwhite",
         "silhouette",
         "clock"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14938,7 +14977,8 @@
         "drawing",
         "art",
         "ink"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -14959,7 +14999,8 @@
         "art",
         "artist",
         "october"
-      ]
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -16045,11 +16086,14 @@
       "image": "assets/social/instagram/17867293537038034.jpg",
       "video": false,
       "tags": [
-        "painting"
+        "pencilcrayon",
+        "copic"
       ],
       "extraTags": [
-        "painting"
-      ]
+        "pencilcrayon",
+        "copic"
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -16093,11 +16137,14 @@
       "image": "assets/social/instagram/17851445425105831.jpg",
       "video": false,
       "tags": [
-        "painting"
+        "pencilcrayon",
+        "copic"
       ],
       "extraTags": [
-        "painting"
-      ]
+        "pencilcrayon",
+        "copic"
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -16109,11 +16156,14 @@
       "image": "assets/social/instagram/17861266801017165.jpg",
       "video": false,
       "tags": [
-        "painting"
+        "pencilcrayon",
+        "copic"
       ],
       "extraTags": [
-        "painting"
-      ]
+        "pencilcrayon",
+        "copic"
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -16125,11 +16175,14 @@
       "image": "assets/social/instagram/17850924493081419.jpg",
       "video": false,
       "tags": [
-        "painting"
+        "pencilcrayon",
+        "copic"
       ],
       "extraTags": [
-        "painting"
-      ]
+        "pencilcrayon",
+        "copic"
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -16157,11 +16210,14 @@
       "image": "assets/social/instagram/17849751604067332.jpg",
       "video": false,
       "tags": [
-        "painting"
+        "pencilcrayon",
+        "copic"
       ],
       "extraTags": [
-        "painting"
-      ]
+        "pencilcrayon",
+        "copic"
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -16173,11 +16229,14 @@
       "image": "assets/social/instagram/17846514778090802.jpg",
       "video": false,
       "tags": [
-        "painting"
+        "pencilcrayon",
+        "copic"
       ],
       "extraTags": [
-        "painting"
-      ]
+        "pencilcrayon",
+        "copic"
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -16189,11 +16248,14 @@
       "image": "assets/social/instagram/17846420572085866.jpg",
       "video": false,
       "tags": [
-        "painting"
+        "pencilcrayon",
+        "copic"
       ],
       "extraTags": [
-        "painting"
-      ]
+        "pencilcrayon",
+        "copic"
+      ],
+      "section": "drawings"
     },
     {
       "platform": "instagram",
@@ -16205,11 +16267,14 @@
       "image": "assets/social/instagram/17855273332052325.jpg",
       "video": false,
       "tags": [
-        "painting"
+        "pencilcrayon",
+        "copic"
       ],
       "extraTags": [
-        "painting"
-      ]
+        "pencilcrayon",
+        "copic"
+      ],
+      "section": "drawings"
     }
   ]
 }

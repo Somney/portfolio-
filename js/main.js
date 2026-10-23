@@ -156,16 +156,26 @@ function postPiece(p) {
   return { title: p.title || "Untitled", meta: [p.date?.slice(0, 4), p.platform === "instagram" ? "Instagram" : "TikTok"].filter(Boolean).join(" · "),
     image: p.art || imgs[0], images: p.art ? [p.art] : imgs, post: p, date: p.date || "" };
 }
+// Each post goes to the FIRST Work section whose tags match (content.js → work order),
+// or to the section named in its "section" field (feed.json, kept across syncs).
+// TikToks only count when the sync saved a picture of the finished piece (p.art) —
+// their covers are title cards. Pictures only; videos live in Videos.
+const allVisible = sortPosts(feed?.posts || [], [{ id: "all", match: "*" }], { hide: social.hide || [], keep: social.keep || [] })[0]?.posts || [];
+const workOf = new Map();
+for (const p of allVisible) {
+  const tags = new Set((p.tags || []).map((t) => t.toLowerCase()));
+  if (p.section === "none") continue;
+  if (!tags.has("poetry") && (p.platform === "tiktok" ? !p.art : !(p.image || p.images?.length) || p.video)) continue;
+  const w = work.find((w) => w.id === p.section) || work.find((w) => (w.match || []).some((m) => tags.has(m)));
+  if (w) workOf.set(p, w.id);
+}
 function workPieces(w) {
   const out = [], seen = new Set();
   if (w.paintings) for (const s of paintings) for (const it of s.items) {
     out.push({ title: it.title, meta: [it.year, it.medium, it.size].filter(Boolean).join(" · "), image: it.image, images: [it.image], item: it, date: String(it.year || "") + "-99" });
     seen.add((it.title || "").toLowerCase().replace(/[^a-z0-9]+/g, ""));
   }
-  // from: ["digital", "sketchbook@instagram"] — a feed section, optionally only one platform's posts
-  const posts = (w.from || []).flatMap((f) => { const [id, plat] = f.split("@"); return (buckets.find((b) => b.id === id)?.posts || []).filter((p) => !plat || p.platform === plat); })
-    .filter((p) => p.art || (!p.video && p.image) || p.images?.length || (w.videos && p.image))   // pictures (videos live in Videos unless the section takes them)
-    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const posts = allVisible.filter((p) => workOf.get(p) === w.id).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   for (const p of posts) { const k = keyOf(p); if (seen.has(k)) continue; seen.add(k); out.push(postPiece(p)); }
   return out;
 }
@@ -187,17 +197,40 @@ function slidesFor(w, pieces) {
 }
 const workList = $(".work__list"), workNav = $(".work-nav");
 const workSecs = [], workKeys = new Set();
-for (const w of work) {
+const shown = (content.workOrder || work.map((w) => w.id)).map((id) => work.find((w) => w.id === id)).filter(Boolean);
+for (const w of shown) {
   const pieces = workPieces(w);
   pieces.forEach((pc) => pc.post && workKeys.add(keyOf(pc.post)));
   if (!pieces.length) continue;
+  // one year at a time: the carousel only builds that year's cards (keeps the page light)
+  const years = [...new Set(pieces.map((pc) => pc.date.slice(0, 4)).filter((y) => /^\d{4}$/.test(y)))].sort((a, b) => b - a);
   const sec = el("section", "wsec");
   sec.id = "work-" + w.id;
   sec.style.setProperty("--wbg", w.color); sec.style.setProperty("--sec-ink", contrastOn(w.color, INK, PAPER));
-  sec.innerHTML = `<div class="wsec__head"><h3 class="wsec__title">${esc(w.title)}</h3><p class="wsec__blurb">${esc(w.blurb || "")} <b>${pieces.length} pieces</b></p></div><div class="wsec__flow"></div>`;
+  sec.innerHTML = `<div class="wsec__head"><h3 class="wsec__title">${esc(w.title)}</h3><p class="wsec__blurb">${esc(w.blurb || "")} <b>${pieces.length} pieces</b></p></div>
+    <div class="wsec__years" role="tablist" aria-label="${esc(w.title)} by year"></div><div class="wsec__flow"></div>`;
   workList.append(sec);
-  const { slides, first } = slidesFor(w, pieces);
-  makeFlow($(".wsec__flow", sec), pieces, { seed: w.id, tint: (i) => PAL[(i + 1) % PAL.length], onOpen: (i) => openLightbox(slides, first[i]) });
+  const yBox = $(".wsec__years", sec), flowRoot = $(".wsec__flow", sec);
+  let flow = null;
+  const show = (y) => {
+    const list = pieces.filter((pc) => pc.date.startsWith(y));
+    const { slides, first } = slidesFor(w, list);
+    flow?.destroy();
+    flow = makeFlow(flowRoot, list, { seed: w.id + y, tint: (i) => PAL[(i + 1) % PAL.length], onOpen: (i) => openLightbox(slides, first[i]) });
+    $$("button", yBox).forEach((b) => b.classList.toggle("on", b.dataset.y === y));
+  };
+  for (const y of years) {
+    const n = pieces.filter((pc) => pc.date.startsWith(y)).length;
+    const b = el("button", "wyear", `${y} <small>${n}</small>`); b.dataset.y = y; b.setAttribute("role", "tab");
+    b.onclick = () => { if (!b.classList.contains("on")) { flowRoot.classList.add("out"); setTimeout(() => { show(y); flowRoot.classList.remove("out"); }, 180); } };
+    yBox.append(b);
+  }
+  if (years.length < 2) yBox.hidden = true;
+  // build the carousel only when the section comes near the screen
+  // start on the newest year that has a decent handful of pieces
+  const cnt = (y) => pieces.filter((pc) => pc.date.startsWith(y)).length;
+  const start = years.find((y) => cnt(y) >= 6) || years.reduce((a, b) => (cnt(b) > cnt(a) ? b : a), years[0]);
+  new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { o.disconnect(); show(start); } }, { rootMargin: "600px" }).observe(sec);
   const chip = el("a", "series-tab", `<i style="background:${esc(w.color)}"></i>${esc(w.title)}`);
   chip.href = "#" + sec.id;
   chip.onclick = (e) => { e.preventDefault(); sec.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth" }); };

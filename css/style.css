@@ -446,3 +446,12 @@ body::after {
 .agegate__no { background: var(--paper); color: var(--ink); }
 .agegate__yes { background: var(--ink); color: var(--paper); box-shadow: 3px 3px 0 var(--book, var(--c1)); }
 .lb-note { display: block; font-style: normal; font-size: 13px; opacity: .8; margin-top: 4px; }
+
+.wsec__years { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px var(--gutter) 0; position: relative; z-index: 3; }
+.wyear { border: 2px solid var(--sec-ink, var(--ink)); background: transparent; color: var(--sec-ink, var(--ink)); border-radius: 999px;
+  padding: 5px 12px; font: 700 13px var(--body); cursor: pointer; transition: transform .12s; }
+.wyear small { opacity: .6; font-size: 11px; margin-left: 2px; }
+.wyear:hover { transform: translateY(-2px); }
+.wyear.on { background: var(--sec-ink, var(--ink)); color: var(--wbg); }
+.wsec__flow { transition: opacity .18s; min-height: clamp(340px, 52vh, 540px); }
+.wsec__flow.out { opacity: 0; }

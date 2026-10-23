@@ -88,7 +88,8 @@ export function makeFlow(root, items, { onOpen, tint = () => "#0d0d0d", seed = "
     if (e.key === "Enter") onOpen?.(active);
   });
   root.querySelectorAll(".cf-arrow").forEach((b) => (b.onclick = () => set(active + +b.dataset.dir)));
-  addEventListener("resize", () => layout(active));
+  const onResize = () => layout(active);
+  addEventListener("resize", onResize);
   layout(0); caption();
-  return { set, get active() { return active; } };
+  return { set, get active() { return active; }, destroy() { removeEventListener("resize", onResize); root.innerHTML = ""; } };
 }

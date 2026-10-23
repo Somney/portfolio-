@@ -126,17 +126,27 @@ export default {
      the hand-picked series below. Videos stay in the Videos section, and a
      piece posted twice (video + photo) shows once.                         */
   work: [
-    { id: "drawings",    title: "Drawings",    color: "#f6f3ec", blurb: "Ink, pencil, marker and tattoo flash.",
-      from: ["drawings", "sketchbook@instagram"] },
-    { id: "digital",     title: "Digital art", color: "#ff8a00", blurb: "Procreate pieces, album covers and commissions.",
-      from: ["digital"] },
-    { id: "paintings",   title: "Paintings",   color: "#ff3ea5", blurb: "Acrylic marker and canvas, plus the finished pieces from my timelapses.",
-      paintings: true, from: ["paintings", "timelapse", "sketchbook@tiktok"] },
-    { id: "photography", title: "Photography", color: "#00e0ff", blurb: "Shows, nights out and everything in between.",
-      from: ["photography"] },
+    // match: hashtags (and the tags I added to untagged Instagram posts). A post goes to
+    // the FIRST section that matches, in this order. To move one piece by hand, set
+    // "section": "<id>" on it in social/feed.json.
     { id: "poetry",      title: "Poetry",      color: "#0d0d0d", blurb: "Words, sometimes with pictures. Tap one to read or play it.",
-      poetry: true, videos: true, from: ["poetry"] },
+      poetry: true, match: ["poetry", "poem", "poems", "spokenword"] },
+    { id: "digital",     title: "Digital art", color: "#ff8a00", blurb: "Procreate pieces, album covers and commissions.",
+      match: ["procreate", "procreateart", "digitalart", "digitaldrawing", "digitalpainting", "digitalartist", "digitalillustration",
+              "ibispaint", "pixelart", "picocad", "3drender", "adobeillustrator", "albumcover", "scrawlvember"] },
+    { id: "photography", title: "Photography", color: "#00e0ff", blurb: "Shows, nights out and everything in between.",
+      match: ["photography", "photo", "film", "filmphotography", "35mm", "super8", "streetphotography", "portraitphotography",
+              "photographer", "shotoniphone", "filmbros", "naturephotography"] },
+    { id: "paintings",   title: "Paintings",   color: "#ff3ea5", blurb: "Acrylic marker and canvas: sketchbook pages, art battles and the finished pieces from my streams.",
+      paintings: true, match: ["painting", "acrylic", "acrylicpainting", "acrylicmarker", "acrylicmarkers", "canvas", "posca", "marker",
+              "artbattle", "gouache", "watercolor", "oilpainting", "sketchbook"] },
+    { id: "drawings",    title: "Drawings",    color: "#f6f3ec", blurb: "Ink, pencil crayon, Copic, tattoo flash and hand-drawn shirts.",
+      match: ["drawing", "drawings", "illustration", "ink", "pencil", "charcoal", "pen", "traditionalart", "fanart", "tattoo",
+              "tattooflash", "sketch", "doodle", "customshirt", "customclothing", "handdrawn"] },
   ],
+  // the order the carousels show on the page
+  workOrder: ["drawings", "digital", "paintings", "photography", "poetry"],
+
 
   /* ---------- Paintings ----------
      Each entry is a "series". Every series gets its own colour, and
