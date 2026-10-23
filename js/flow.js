@@ -48,10 +48,11 @@ export function makeFlow(root, items, { onOpen, tint = () => "#0d0d0d", seed = "
     if (n !== active) flowTick(n);
     active = n; layout(active); caption();
   }
-  let x0 = 0, start = 0, down = false, dragIdx = 0;
-  cf.addEventListener("pointerdown", (e) => { down = true; dragged = false; x0 = e.clientX; start = active; dragIdx = active; });
-  addEventListener("pointermove", (e) => {
-    if (!down) return;
+  // drag: listen to the page only while THIS carousel is being dragged, and stop on
+  // cancel too (a touch that turns into a page scroll sends pointercancel, not pointerup)
+  let x0 = 0, start = 0, dragIdx = 0, pid = null;
+  const move = (e) => {
+    if (e.pointerId !== pid) return;
     const dx = e.clientX - x0;
     if (Math.abs(dx) > 6 && !dragged) { dragged = true; stage.classList.add("dragging"); }
     if (dragged) {
@@ -59,14 +60,21 @@ export function makeFlow(root, items, { onOpen, tint = () => "#0d0d0d", seed = "
       if (idx !== dragIdx) { dragIdx = idx; flowTick(idx); }
       layout(pos);
     }
-  });
-  addEventListener("pointerup", (e) => {
-    if (!down) return; down = false; stage.classList.remove("dragging");
+  };
+  const end = (e) => {
+    if (e.pointerId !== pid) return;
+    pid = null; stage.classList.remove("dragging");
+    removeEventListener("pointermove", move); removeEventListener("pointerup", end); removeEventListener("pointercancel", end);
     if (dragged) {
-      const land = clamp(Math.round(start - (e.clientX - x0) / (W() * 0.45)), 0, cards.length - 1);
-      if (land === dragIdx) { active = land; layout(active); caption(); } else set(land);
+      const land = e.type === "pointercancel" ? dragIdx : clamp(Math.round(start - (e.clientX - x0) / (W() * 0.45)), 0, cards.length - 1);
+      if (land === active) { layout(active); caption(); } else set(land);
       setTimeout(() => (dragged = false), 0);
     }
+  };
+  cf.addEventListener("pointerdown", (e) => {
+    if (pid !== null) return;
+    pid = e.pointerId; dragged = false; x0 = e.clientX; start = active; dragIdx = active;
+    addEventListener("pointermove", move); addEventListener("pointerup", end); addEventListener("pointercancel", end);
   });
   let acc = 0;
   cf.addEventListener("wheel", (e) => {
