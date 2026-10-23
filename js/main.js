@@ -170,6 +170,9 @@ const workOf = new Map();
 for (const p of allVisible) {
   const tags = new Set((p.tags || []).map((t) => t.toLowerCase()));
   if (p.section === "none") continue;
+  // sketchbook pages/timelapses live in the Sketchbooks section, not Work (unless the post is also canvas etc.)
+  const sk = content.workSkip || {};
+  if (!p.section && (sk.tags || []).some((t) => tags.has(t)) && !(sk.unless || []).some((t) => tags.has(t))) continue;
   if (!tags.has("poetry") && (p.platform === "tiktok" ? !p.art : !(p.image || p.images?.length) || p.video)) continue;
   const w = work.find((w) => w.id === p.section) || work.find((w) => (w.match || []).some((m) => tags.has(m)));
   if (w) workOf.set(p, w.id);

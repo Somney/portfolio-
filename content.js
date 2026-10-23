@@ -139,13 +139,16 @@ export default {
       expandAll: true,                 // every photo of a multi-photo post gets its own card
       match: ["photography", "photo", "film", "filmphotography", "35mm", "super8", "streetphotography", "portraitphotography",
               "photographer", "shotoniphone", "filmbros", "naturephotography"] },
-    { id: "paintings",   title: "Paintings",   color: "#ff3ea5", blurb: "Acrylic marker and canvas: sketchbook pages, art battles and the finished pieces from my streams.",
-      paintings: true, match: ["painting", "acrylic", "acrylicpainting", "acrylicmarker", "acrylicmarkers", "canvas", "posca", "marker",
-              "artbattle", "gouache", "watercolor", "oilpainting", "sketchbook"] },
+    { id: "paintings",   title: "Paintings",   color: "#ff3ea5", blurb: "Canvas pieces, art battles and favourite pages.",
+      paintings: true, match: ["painting", "acrylic", "acrylicpainting", "canvas", "artbattle", "gouache", "watercolor", "oilpainting"] },
     { id: "drawings",    title: "Drawings",    color: "#f6f3ec", blurb: "Ink, pencil crayon, Copic, tattoo flash and hand-drawn shirts.",
       match: ["drawing", "drawings", "illustration", "ink", "pencil", "charcoal", "pen", "traditionalart", "fanart", "tattoo",
               "tattooflash", "sketch", "doodle", "customshirt", "customclothing", "handdrawn"] },
   ],
+  // posts with these tags stay out of Work (sketchbook pages are in Sketchbooks),
+  // unless they also have one of the "unless" tags
+  workSkip: { tags: ["sketchbook", "acrylicmarker", "acrylicmarkers", "sketchbookdump"],
+              unless: ["canvas", "acrylicpainting", "artbattle", "procreate", "digitalart", "scrawlvember", "inktober"] },
   // the order the carousels show on the page
   workOrder: ["drawings", "digital", "paintings", "photography", "poetry"],
 
