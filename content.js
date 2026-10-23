@@ -12,7 +12,7 @@ export default {
   /* ---------- About you ---------- */
   artist: {
     name: "Fury Blade Seif",               // big name in the hero + browser tab
-    tagline: "paintings · drawings · digital art · photography · poetry · sketchbooks",
+    tagline: "",                         // line under the rotating words (empty = none)
     slogan: "live life, live forever",
     bio: "Fury Blade Seif paints, draws, designs, shoots and writes, mostly in sketchbooks, often live on stream, one page at a time.",
     email: "sonofsomney@gmail.com",
