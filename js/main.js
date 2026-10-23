@@ -180,7 +180,7 @@ function workPieces(w) {
     const k = keyOf(p); if (seen.has(k)) continue; seen.add(k);
     const pc = postPiece(p);
     // expandYears: in these years, every photo of a multi-photo post gets its own card
-    if ((w.expandYears || []).includes(pc.date.slice(0, 4)) && pc.images.length > 1)
+    if ((w.expandAll || (w.expandYears || []).includes(pc.date.slice(0, 4))) && pc.images.length > 1)
       pc.images.forEach((src, i) => out.push({ ...pc, image: src, images: [src], meta: `${pc.meta} · ${i + 1}/${pc.images.length}` }));
     else out.push(pc);
   }
