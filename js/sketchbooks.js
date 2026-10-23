@@ -509,6 +509,7 @@ function bendLeaf(leaf, i, L) {
   const S = V.stack;
   const zR = S ? S.below[i] : (L - 1 - i) * 0.0035, zL = S ? S.above[i] : i * 0.0035, t = leaf.t || 0;
   const zBase = lerp(zR, zL, p) + t * (1 - p) + (leaf.stiff && !t ? 0.002 : 0);
+  leaf.zBase = zBase;
   const theta = p * Math.PI;
   if (leaf.slab) {
     // thick leaf: the inner face sits t behind the outer one, the slab fills between
@@ -558,7 +559,8 @@ async function buildBook(b) {
     const folder = (b.folder || "").replace(/\/$/, "");
     const liftUrl = cfg.lift.includes("/") ? cfg.lift : `${folder}/${cfg.lift}`;
     return Promise.all([loadImage(paths.pages[k]), loadImage(liftUrl)]).then(([bt, lt]) => {
-      const L = makeLayer(bt.image, lt.image, cfg.notes, leafIdx, side);
+      const notes = cfg.notes.map((n) => (n.overhang?.image && !n.overhang.image.includes("/") ? { ...n, overhang: { ...n.overhang, image: `${folder}/${n.overhang.image}` } } : n));
+      const L = makeLayer(bt.image, lt.image, notes, leafIdx, side);
       V.layers.push(L);
       return L.tex;
     }).catch(() => plainTex(k));
@@ -687,7 +689,7 @@ function syncPages() {
 }
 function dropLayers(lf, side) {
   const i = V.leaves.indexOf(lf);
-  V.layers = V.layers.filter((L) => !(L.leafIdx === i && L.side === side));
+  V.layers = V.layers.filter((L) => { const drop = L.leafIdx === i && L.side === side; if (drop) dropOverhangs(L); return !drop; });
 }
 
 function disposeBook() {
@@ -700,6 +702,7 @@ function disposeBook() {
   for (const m of V.blocks || []) { V.book.remove(m); m.geometry.dispose(); }
   for (const m of V.boxMats || []) m.dispose();
   V.blocks = []; V.boxMats = []; V.stack = null;
+  (V.layers || []).forEach(dropOverhangs);
   V.leaves = []; V.layers = [];
 }
 
@@ -723,10 +726,12 @@ function makeLayer(base, lift, notes, leafIdx, side) {
     // positions along the peel direction ("local y": the free edge is the largest)
     const ly = pts.map(([x, y]) => -((x - cx) * Math.sin(phi) - (y - cy) * Math.cos(phi)));
     const fr = { cx, cy, phi, y0: Math.min(...ly), y1: Math.max(...ly), r: Math.hypot(box.x1 - box.x0, box.y1 - box.y0) };
-    return { poly, pts, box, fr, col: `rgb(${Math.min(255, r + 18)},${Math.min(255, gg + 18)},${Math.min(255, bb + 18)})`, p: 0, target: 0, user: false };
+    const over = Array.isArray(note) ? null : note.overhang;   // part of the lifted note that sticks out past the page edge
+    return { poly, pts, box, fr, over, col: `rgb(${Math.min(255, r + 18)},${Math.min(255, gg + 18)},${Math.min(255, bb + 18)})`, p: 0, target: 0, user: false };
   });
   const tex = prep(new THREE.CanvasTexture(c));
   const L = { c, g, base, lift, notes: N, tex, leafIdx, side, peeked: false };
+  for (const n of N) if (n.over?.image) addOverhang(L, n);
   drawLayer(L);
   return L;
 }
@@ -766,8 +771,33 @@ function drawLayer(L) {
   }
   L.tex.needsUpdate = true;
 }
+// a flat picture beside the page (outer edge), shown as the note lifts over onto it
+function addOverhang(L, n) {
+  const lf = V.leaves[L.leafIdx]; if (!lf) return;
+  const w = (n.over.width || 0.4) * lf.W;
+  const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, alphaTest: 0.02 });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, lf.H), mat);
+  mesh.visible = false; mesh.renderOrder = 2;
+  lf.group.add(mesh);
+  n.mesh = mesh; n.meshLeaf = lf; n.meshX = (L.side === "front" ? 1 : -1) * (lf.W + w / 2);
+  loadImage(n.over.image).then((t) => { prep(t); mat.map = t; mat.color.setScalar(0.92); mat.needsUpdate = true; }).catch(() => {});
+}
+function dropOverhangs(L) {
+  for (const n of L.notes) if (n.mesh) { n.meshLeaf.group.remove(n.mesh); n.mesh.geometry.dispose(); n.mesh.material.map?.dispose(); n.mesh.material.dispose(); n.mesh = null; }
+}
+function stepOverhangs(L) {
+  for (const n of L.notes) {
+    if (!n.mesh) continue;
+    const e = easeInOut(n.p), show = layerOnShow(L) && e > 0.02;
+    n.mesh.visible = show;
+    if (!show) continue;
+    n.mesh.material.opacity = clamp((e - 0.45) / 0.45, 0, 1);
+    n.mesh.position.set(n.meshX, 0, (n.meshLeaf.zBase || 0) + 0.004 + 0.02 * Math.sin(e * Math.PI));
+  }
+}
 function stepLayers(dt) {
   for (const L of V.layers) {
+    stepOverhangs(L);
     let dirty = false;
     for (const n of L.notes) {
       if (n.p === n.target) continue;
