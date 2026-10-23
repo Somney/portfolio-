@@ -176,7 +176,14 @@ function workPieces(w) {
     seen.add((it.title || "").toLowerCase().replace(/[^a-z0-9]+/g, ""));
   }
   const posts = allVisible.filter((p) => workOf.get(p) === w.id).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  for (const p of posts) { const k = keyOf(p); if (seen.has(k)) continue; seen.add(k); out.push(postPiece(p)); }
+  for (const p of posts) {
+    const k = keyOf(p); if (seen.has(k)) continue; seen.add(k);
+    const pc = postPiece(p);
+    // expandYears: in these years, every photo of a multi-photo post gets its own card
+    if ((w.expandYears || []).includes(pc.date.slice(0, 4)) && pc.images.length > 1)
+      pc.images.forEach((src, i) => out.push({ ...pc, image: src, images: [src], meta: `${pc.meta} · ${i + 1}/${pc.images.length}` }));
+    else out.push(pc);
+  }
   return out;
 }
 function slidesFor(w, pieces) {

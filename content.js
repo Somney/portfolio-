@@ -60,7 +60,8 @@ export default {
       { id: "wearables", title: "Custom shirts", color: "#c6ff00",
         match: ["customshirt", "customclothing", "diycustomshirt", "customtshirts", "customtshirt", "handpainted"] },
       { id: "photography", title: "Photography", color: "#00e0ff",
-        match: ["photography", "photo", "film", "filmphotography", "35mm", "super8", "streetphotography", "portraitphotography",
+        expandYears: ["2020", "2021"],   // show every photo of multi-photo posts from these years
+      match: ["photography", "photo", "film", "filmphotography", "35mm", "super8", "streetphotography", "portraitphotography",
                 "photographer", "shotoniphone", "filmbros", "naturephotography"] },
       { id: "poetry", title: "Poetry", color: "#f6f3ec", videos: false,   // poems live in Work → Poetry, not Videos
         match: ["poetry", "poem", "poems", "poet", "spokenword", "writing"] },
@@ -135,6 +136,7 @@ export default {
       match: ["procreate", "procreateart", "digitalart", "digitaldrawing", "digitalpainting", "digitalartist", "digitalillustration",
               "ibispaint", "pixelart", "picocad", "3drender", "adobeillustrator", "albumcover", "scrawlvember"] },
     { id: "photography", title: "Photography", color: "#00e0ff", blurb: "Shows, nights out and everything in between.",
+      expandYears: ["2020", "2021"],   // show every photo of multi-photo posts from these years
       match: ["photography", "photo", "film", "filmphotography", "35mm", "super8", "streetphotography", "portraitphotography",
               "photographer", "shotoniphone", "filmbros", "naturephotography"] },
     { id: "paintings",   title: "Paintings",   color: "#ff3ea5", blurb: "Acrylic marker and canvas: sketchbook pages, art battles and the finished pieces from my streams.",
