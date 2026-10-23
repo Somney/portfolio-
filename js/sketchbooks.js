@@ -875,7 +875,7 @@ function fitViewer() {
 // camera distance that fits the open spread, for any rotation of the book
 function fitDistance(spin) {
   const portrait = V.camera.aspect < 0.9;
-  const sw = (V.refW || V.W) * 2 * (portrait ? 1.1 : 1.32), sh = (V.refH || V.H) * 1.55 * (0.8 + 0.2 * Math.cos(V.tilt));
+  const sw = (V.refW || V.W) * 2 * (portrait ? 1.16 : 1.32), sh = (V.refH || V.H) * 1.55 * (0.8 + 0.2 * Math.cos(V.tilt));
   const c = Math.abs(Math.cos(spin)), n = Math.abs(Math.sin(spin));
   const w = c * sw + n * sh, h = n * sw + c * sh;
   return Math.max(w / (2 * V.tan * V.camera.aspect), h / (2 * V.tan));
@@ -955,7 +955,7 @@ function bindViewerInput() {
       // pinch: scale by finger spread, keep the pinched spot under the fingers (moving both pans)
       const [a, b] = [...pts.values()];
       const m = off((a.x + b.x) / 2, (a.y + b.y) / 2);
-      V.zoom = clamp(pinch.z0 * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, pinch.d0), 1, 4);
+      V.zoom = clamp(pinch.z0 * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, pinch.d0), ZMIN, 4);
       V.fx = pinch.wx - m.x / pxPerUnit(V.zoom); V.fy = pinch.wy - m.y / pxPerUnit(V.zoom);
       return;
     }
@@ -998,7 +998,7 @@ function bindViewerInput() {
   });
   const end = (e) => {
     pts.delete(e.pointerId);
-    if (pinch) { if (pts.size < 2) pinch = null; if (!pts.size) { lock = false; V.gesture = false; if (V.zoom < 1.08) resetZoom(); } return; }
+    if (pinch) { if (pts.size < 2) pinch = null; if (!pts.size) { lock = false; V.gesture = false; if (V.zoom > 0.93 && V.zoom < 1.08) resetZoom(); } return; }
     if (!pts.size) { lock = false; V.gesture = false; }
     if (!drag) return;
     if (drag.mode === "pan") { drag = null; return; }
@@ -1013,7 +1013,7 @@ function bindViewerInput() {
     } else if (!drag.moved) {
       const now = performance.now();
       const note = noteAt(drag.x0, drag.y0);
-      if (now - lastTap < 300) { clearTimeout(noteTimer); V.zoom > 1.05 ? resetZoom() : zoomAt(off(drag.x0, drag.y0), 2.4); lastTap = 0; }
+      if (now - lastTap < 300) { clearTimeout(noteTimer); Math.abs(V.zoom - 1) > 0.05 ? resetZoom() : zoomAt(off(drag.x0, drag.y0), 2.4); lastTap = 0; }
       else if (note) { lastTap = now; noteTimer = setTimeout(() => toggleNote(note), 220); }   // lift / lay down a sticky note (a double-tap zooms instead)
       else if (V.zoom > 1.05) lastTap = now;               // zoomed in: a single tap doesn't flip pages
       else {
@@ -1028,7 +1028,7 @@ function bindViewerInput() {
   canvas.addEventListener("wheel", (e) => {
     e.preventDefault();
     zoomAt(off(e.clientX, e.clientY), V.zoom * Math.exp(-e.deltaY * 0.0016));
-    if (V.zoom < 1.02) resetZoom();
+    if (V.zoom > 0.97 && V.zoom < 1.02) resetZoom();
   }, { passive: false });
   canvas.addEventListener("pointercancel", end);
 
@@ -1038,7 +1038,7 @@ function bindViewerInput() {
     if (act === "next") flip(1);
     if (act === "prev") flip(-1);
     if (act === "close") closeViewer();
-    if (act === "zoom") V.zoom > 1.05 ? resetZoom() : zoomAt({ x: V.canvas.clientWidth * 0.18, y: 0 }, 2.2);
+    if (act === "zoom") Math.abs(V.zoom - 1) > 0.05 ? resetZoom() : zoomAt({ x: V.canvas.clientWidth * 0.18, y: 0 }, 2.2);
     if (act === "rotate") rotateBook(-1);
     if (act === "sound") { setMuted(!isMuted()); syncSoundBtn(); }
   });
@@ -1053,13 +1053,15 @@ function bindViewerInput() {
 function syncSoundBtn() { $('[data-act="sound"]', V.root).classList.toggle("off", isMuted()); }
 
 // ---- zoom: V.zoom is the scale (1 = whole spread), V.fx/fy the camera centre ----
+// pinch out below 1× to see past the page edges (e.g. a sticky note that flips off the page)
+const ZMIN = 0.55;
 function resetZoom() { V.zoom = 1; V.fx = 0; V.fy = -0.04; }
 const pxPerUnit = (z) => V.canvas.clientHeight / (2 * V.tan * (V.fitD / z));
 // zoom to z keeping the point under screen offset m (px from canvas centre, y up) fixed
 function zoomAt(m, z) {
   const z0 = V.zoom, c = { x: V.cam.x, y: V.cam.y };
   const wx = c.x + m.x / pxPerUnit(z0), wy = c.y + m.y / pxPerUnit(z0);
-  V.zoom = clamp(z, 1, 4);
+  V.zoom = clamp(z, ZMIN, 4);
   V.fx = wx - m.x / pxPerUnit(V.zoom); V.fy = wy - m.y / pxPerUnit(V.zoom);
 }
 
@@ -1118,7 +1120,7 @@ function viewerFrame(now) {
   const k = 1 - Math.exp(-dt * 6);
   const tz = V.fitD / V.zoom;
   // keep the view on the book: the further in, the further you can pan (none at 1×)
-  const cs = Math.abs(Math.cos(V.spin)), sn = Math.abs(Math.sin(V.spin)), free = 1 - 1 / V.zoom;
+  const cs = Math.abs(Math.cos(V.spin)), sn = Math.abs(Math.sin(V.spin)), free = Math.max(0, 1 - 1 / V.zoom);
   const rx = (cs * V.W + sn * V.H / 2) * 1.05 * free, ry = (sn * V.W + cs * V.H / 2) * 1.05 * free;
   V.fx = clamp(V.fx, -rx, rx); V.fy = clamp(V.fy, -0.04 - ry, -0.04 + ry);
   const tx = V.fx, ty = V.fy;
