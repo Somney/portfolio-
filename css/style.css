@@ -87,7 +87,6 @@ section, footer { position: relative; }
 .hero__tagline { font-weight: 500; font-size: 18px; margin: 18px 0 0; }
 .hero__tagline:empty { display: none; }
 /* the big name's letters sit a hair right of their box: pull them in so they line up with PORTFOLIO */
-.hero__name { margin-left: -.02em; }
 .hero__scroll {
   position: absolute; z-index: 2; left: var(--gutter); bottom: 24px; font-weight: 700; text-decoration: none;
   font-size: 13px; letter-spacing: .2em; text-transform: uppercase; animation: bob 1.6s ease-in-out infinite;
@@ -458,3 +457,27 @@ body::after {
 .wyear.on { background: var(--sec-ink, var(--ink)); color: var(--wbg); }
 .wsec__flow { transition: opacity .18s; min-height: clamp(340px, 52vh, 540px); }
 .wsec__flow.out { opacity: 0; }
+
+/* ---------- text frames (commonSans badKern look, free stand-in: Sofia Sans Extra Condensed, OFL) ---------- */
+@font-face { font-family: "FrameSans"; src: url("../assets/fonts/sofia-sans-extra-condensed-latin-300-normal.woff2") format("woff2"); font-weight: 300; font-display: swap; }
+@font-face { font-family: "FrameSans"; src: url("../assets/fonts/sofia-sans-extra-condensed-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+:root { --frame: "FrameSans", "Arial Narrow", sans-serif; }
+.framed { font-family: var(--frame) !important; font-weight: 300; text-transform: none !important; letter-spacing: 0; }
+.framed .frame {
+  display: table; background: var(--fbg); color: var(--ffg); margin-left: var(--find);
+  padding: 0 .06em; line-height: .84; letter-spacing: -.07em;   /* bad kerning: letters bump into each other */
+  font-kerning: none; font-feature-settings: "kern" 0;
+}
+.framed .frame::after { content: ""; display: inline-block; width: .07em; }   /* give back the last letter's squeeze */
+/* pressed by hand: each block a touch crooked, letters a hair off-register from their block,
+   ink a little heavier at the edges, rough + speckled through the #ink filter */
+.framed .frame { background: none; position: relative; isolation: isolate; transform: rotate(var(--frot, 0deg)); transform-origin: left center; }
+.framed .frame::before { content: ""; position: absolute; inset: 0; background: var(--fbg); filter: url(#inkBlock); z-index: -1; }
+.framed .frame__ink { display: inline-block; transform: translate(var(--fmx, 0), var(--fmy, 0)); filter: url(#inkText); }
+.framed.glitching::before, .framed.glitching::after { display: none; }
+.hero__name.framed { font-size: clamp(96px, 26vw, 270px); }
+.sec-title.framed { font-size: clamp(60px, 13vw, 170px); }
+.wsec__title.framed { font-size: clamp(52px, 10vw, 120px); }
+.contact__big.framed { font-size: clamp(110px, 26vw, 360px); }
+.hero__words span.framed-word { font-family: var(--frame); font-weight: 500; letter-spacing: -.05em; font-size: 1.35em; line-height: .9; padding: 0 .12em .02em; }
+.hero__words { height: 1.25em; }

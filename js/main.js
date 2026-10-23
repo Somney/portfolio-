@@ -9,6 +9,7 @@ import { startViz } from "./viz.js";
 import { getAnalyser } from "./sound.js";
 import { sortPosts } from "./social-sort.js";
 import { makeFlow } from "./flow.js";
+import { frame, FRAMES, ensureInk } from "./frames.js";
 
 const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [], social = {} } = content;
 const INK = theme.ink, PAPER = theme.paper, PAL = theme.palette;
@@ -78,9 +79,18 @@ function heroNext(x, y) {
   setTimeout(() => {
     dancer.nextStyle();
     wordEl.classList.remove("pop"); void wordEl.offsetWidth;
-    wordEl.textContent = hero.words[heroIdx % hero.words.length];
+    wordIdx = (wordIdx + 1) % hero.words.length;
+    setWord(wordIdx);
     wordEl.classList.add("pop");
   }, 260);
+}
+let wordIdx = 0;
+// each rotating word sits on its own colour frame
+function setWord(i) {
+  const [bg, fg] = FRAMES[(i * 5 + 3) % FRAMES.length];
+  wordEl.textContent = hero.words[i];
+  wordEl.classList.add("framed-word");
+  wordEl.style.background = bg; wordEl.style.color = fg;
 }
 let heroTimer = reducedMotion ? 0 : setInterval(() => heroNext(), (hero.colorChangeSeconds || 3.2) * 1000);
 $(".hero").addEventListener("click", (e) => {
@@ -622,6 +632,13 @@ addEventListener("keydown", (e) => {
   if (e.key === "ArrowUp") ipMove(-1);
   if (e.key === "Enter") ipSelect();
 });
+
+/* ---------- Text-frame titling on the flashy headings ---------- */
+frame($(".hero__name"), { lines: artist.name.split(/\s+/), seed: "hero" });
+$$(".sec-title").forEach((h) => frame(h));
+$$(".wsec__title").forEach((h) => frame(h, { indent: 0 }));
+frame($(".contact__big"), { seed: "hi" });
+ensureInk(); setWord(0);
 
 /* ---------- Scroll reveal ---------- */
 const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))), { threshold: 0.15 });
