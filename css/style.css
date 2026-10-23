@@ -498,3 +498,6 @@ body { font-weight: 500; font-size: 17px; }
 .wsec:first-child { border-top: 3px solid var(--ink); }
 /* smaller titles (phones, Work section headings) get a finer ink filter so they stay crisp */
 @media (max-width: 700px) { .framed .frame__ink { filter: url(#inkTextSm); } }
+/* the iPod keeps a plain system sans, like a real iPod screen */
+.ipod, .ipod-btn, .np { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+.np__txt b { font-family: inherit; }
