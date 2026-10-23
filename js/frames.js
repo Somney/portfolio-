@@ -39,6 +39,12 @@ export function ensureInk() {
       <feGaussianBlur in="warped" stdDeviation="1.4" result="soft"/>
       <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9.6"/>
     </filter>
+    <filter id="inkTextSm" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="1" seed="11" result="flow"/>
+      <feDisplacementMap in="SourceGraphic" in2="flow" scale="1.4" xChannelSelector="R" yChannelSelector="G" result="warped"/>
+      <feGaussianBlur in="warped" stdDeviation="0.6" result="soft"/>
+      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 14 -6"/>
+    </filter>
     <filter id="inkBlock" x="-3%" y="-6%" width="106%" height="112%" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="4" result="flow"/>
       <feDisplacementMap in="SourceGraphic" in2="flow" scale="1.5" xChannelSelector="R" yChannelSelector="G"/>

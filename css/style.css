@@ -488,3 +488,13 @@ body::after {
 body { font-weight: 500; font-size: 17px; }
 .marquee__track, .feed-card__kicker, .contact__slogan, .contact__email, .viewer__count, .agegate__tag, .agegate__in, .x-media--glyph span { font-weight: 600; }
 .marquee { display: none; }   /* scrolling text bar under the hero: removed */
+/* Work intro is its own dark band, so the Drawings carousel reads as a separate section below it */
+.work { background: var(--ink); color: var(--paper); }
+.work > .sec-head { padding-bottom: 44px; }
+.work-nav .series-tab { background: transparent; border-color: var(--paper); color: var(--paper); }
+.work-nav .series-tab:hover { background: var(--paper); color: var(--ink); }
+.work-nav .series-tab i { border-color: var(--paper); }
+.work__list { margin-top: 0; }
+.wsec:first-child { border-top: 3px solid var(--ink); }
+/* smaller titles (phones, Work section headings) get a finer ink filter so they stay crisp */
+@media (max-width: 700px) { .framed .frame__ink { filter: url(#inkTextSm); } }
