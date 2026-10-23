@@ -197,7 +197,7 @@ export default {
       size: [5.25, 8.25], thickness: 0.85, hardcover: true, note: "Sep – Oct 2026" },
     // Started Nov 2023. Page photos were taken recently, so their dates can't be used
     // for ordering — pages are numbered by hand (page-01, page-02, … in the order sent).
-    { id: "book-02", title: "Sketchbook 02", year: 2023, color: "#ff8a00", folder: "assets/sketchbooks/book-02", pages: 125,
+    { id: "book-02", title: "Sketchbook 02", year: 2023, color: "#ff8a00", folder: "assets/sketchbooks/book-02", pages: 131,
       size: [8.25, 10], thickness: 0.72, note: "Started Nov 2023",
       // Sticky notes you can lift: page number → the photo with the notes lifted,
       // plus one outline per note ([x, y] corners, 0–1 across / down the page).
@@ -212,9 +212,9 @@ export default {
         ] },
         // "Vultures": the pink note flips over to the right and hangs off the page.
         // overhang = the part of the lifted note past the page edge (width: fraction of the page width)
-        113: { lift: "page-113-lift.jpg", notes: [
+        111: { lift: "page-111-lift.jpg", notes: [
           { points: [[0.635, 0.655], [1, 0.655], [1, 0.965], [0.635, 0.965]], peel: 90,
-            overhang: { image: "page-113-flap.png", width: 0.4 } },
+            overhang: { image: "page-111-flap.png", width: 0.4 } },
         ] },
       } },
     // Pocket kraft notebook with the traffic-cone cover
