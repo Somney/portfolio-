@@ -465,15 +465,17 @@ body::after {
 .framed { font-family: var(--frame) !important; font-weight: 300; text-transform: none !important; letter-spacing: 0; }
 .framed .frame {
   display: table; background: var(--fbg); color: var(--ffg); margin-left: var(--find);
-  padding: 0 .06em; line-height: .84; letter-spacing: -.07em;   /* bad kerning: letters bump into each other */
+  padding: 0 .06em; line-height: .84; letter-spacing: -.08em;   /* bad kerning: letters bump into each other */
   font-kerning: none; font-feature-settings: "kern" 0;
 }
 .framed .frame::after { content: ""; display: inline-block; width: .07em; }   /* give back the last letter's squeeze */
 /* pressed by hand: each block a touch crooked, letters a hair off-register from their block,
    ink a little heavier at the edges, rough + speckled through the #ink filter */
-/* clean, flat, digital blocks; the only "ink" is where letters meet (#inkText) */
+/* clean, flat, digital blocks; the only "ink" is where letters meet (#jellyL/M/S) */
 .framed .frame { background: var(--fbg); position: relative; }
-.framed .frame__ink { display: inline-block; filter: url(#inkText); }
+.framed .frame__ink { display: inline-block; filter: url(#jellyM); }
+.framed[data-jelly="L"] .frame__ink { filter: url(#jellyL); }
+.framed[data-jelly="S"] .frame__ink { filter: url(#jellyS); }
 .framed.glitching::before, .framed.glitching::after { display: none; }
 .hero__name.framed { font-size: clamp(80px, min(26vw, 21svh), 270px); }
 .sec-title.framed { font-size: clamp(60px, 13vw, 170px); }
@@ -497,7 +499,6 @@ body { font-weight: 500; font-size: 17px; }
 .work__list { margin-top: 0; }
 .wsec:first-child { border-top: 3px solid var(--ink); }
 /* smaller titles (phones, Work section headings) get a finer ink filter so they stay crisp */
-@media (max-width: 700px) { .framed .frame__ink { filter: url(#inkTextSm); } }
 /* the iPod keeps a plain system sans, like a real iPod screen */
 .ipod, .ipod-btn, .np { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif; }
 .np__txt b { font-family: inherit; }

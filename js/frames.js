@@ -29,18 +29,22 @@ export function ensureInk() {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("width", "0"); svg.setAttribute("height", "0"); svg.setAttribute("aria-hidden", "true");
   svg.style.position = "absolute";
-  // inkText: no noise, no warp — the strokes stay clean and digital. A soft blur pulled
+  // jellyL/M/S: no noise, no warp — the strokes stay clean and digital. A soft blur pulled
   //   back to a hard edge only changes the shape where strokes meet or crowd each other:
   //   those inner corners fill in smoothly, like ink pooling where a press squeezes it.
   //   Straight runs and outer curves keep their exact width (threshold at half alpha).
   svg.innerHTML = `
-    <filter id="inkText" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="soft"/>
-      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 11 -5"/>
+    <filter id="jellyL" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3.1" result="soft"/>
+      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 12 -5.6"/>
     </filter>
-    <filter id="inkTextSm" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="soft"/>
-      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 9 -4"/>
+    <filter id="jellyM" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.0" result="soft"/>
+      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 11 -5.1"/>
+    </filter>
+    <filter id="jellyS" x="-6%" y="-10%" width="112%" height="120%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.2" result="soft"/>
+      <feColorMatrix in="soft" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 10 -4.6"/>
     </filter>`;
   document.body.prepend(svg);
 }
@@ -68,5 +72,16 @@ export function frame(el, { lines, seed, caps = "bad", indent = 0.6 } = {}) {
     s.textContent = ""; s.append(ink);
     el.append(s);
   });
+  sizeJelly(el);
   return el;
 }
+
+// the jelly (how far joins melt) is in pixels, so pick the strength from the title's size
+const framedEls = new Set();
+function sizeJelly(el) {
+  framedEls.add(el);
+  const fs = parseFloat(getComputedStyle(el).fontSize) || 80;
+  el.dataset.jelly = fs >= 150 ? "L" : fs >= 90 ? "M" : "S";
+}
+let jt = 0;
+addEventListener("resize", () => { clearTimeout(jt); jt = setTimeout(() => framedEls.forEach(sizeJelly), 200); });
