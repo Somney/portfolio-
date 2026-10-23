@@ -464,16 +464,17 @@ body::after {
 :root { --frame: "FrameSans", "Arial Narrow", sans-serif; }
 .framed { font-family: var(--frame) !important; font-weight: 300; text-transform: none !important; letter-spacing: 0; }
 .framed .frame {
-  display: table; background: var(--fbg); color: var(--ffg); margin-left: var(--find);
-  padding: 0 .06em; line-height: .84; letter-spacing: -.07em;   /* bad kerning: letters bump into each other */
-  font-kerning: none; font-feature-settings: "kern" 0;
+  display: table; position: relative; isolation: isolate; color: var(--ffg); margin-left: var(--find);
+  padding: 0 .08em 0 .05em; line-height: .84; font-weight: var(--fw, 300);
+  font-kerning: none; transform: rotate(var(--frot, 0deg)); transform-origin: left center; white-space: nowrap;
 }
-.framed .frame::after { content: ""; display: inline-block; width: .07em; }   /* give back the last letter's squeeze */
-/* pressed by hand: each block a touch crooked, letters a hair off-register from their block,
-   ink a little heavier at the edges, rough + speckled through the #ink filter */
-.framed .frame { background: none; position: relative; isolation: isolate; transform: rotate(var(--frot, 0deg)); transform-origin: left center; }
 .framed .frame::before { content: ""; position: absolute; inset: 0; background: var(--fbg); filter: url(#inkBlock); z-index: -1; }
-.framed .frame__ink { display: inline-block; transform: translate(var(--fmx, 0), var(--fmy, 0)); filter: url(#inkText); }
+.framed .frame__ink { display: inline-block; }
+.framed .fl { display: inline-block; transform-origin: left 84%; }
+.framed.gooL .frame__ink { filter: url(#gooL); }
+.framed.gooM .frame__ink { filter: url(#gooM); }
+.framed.gooS .frame__ink { filter: url(#gooS); }
+.framed.jelly-live .frame__ink { filter: url(#gooLive); }
 .framed.glitching::before, .framed.glitching::after { display: none; }
 .hero__name.framed { font-size: clamp(80px, min(26vw, 21svh), 270px); }
 .sec-title.framed { font-size: clamp(60px, 13vw, 170px); }
@@ -497,7 +498,7 @@ body { font-weight: 500; font-size: 17px; }
 .work__list { margin-top: 0; }
 .wsec:first-child { border-top: 3px solid var(--ink); }
 /* smaller titles (phones, Work section headings) get a finer ink filter so they stay crisp */
-@media (max-width: 700px) { .framed .frame__ink { filter: url(#inkTextSm); } }
 /* the iPod keeps a plain system sans, like a real iPod screen */
 .ipod, .ipod-btn, .np { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif; }
 .np__txt b { font-family: inherit; }
+.hero__words { height: auto; overflow: visible; margin-top: 26px; }

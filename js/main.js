@@ -9,7 +9,7 @@ import { startViz } from "./viz.js";
 import { getAnalyser } from "./sound.js";
 import { sortPosts } from "./social-sort.js";
 import { makeFlow } from "./flow.js";
-import { frame, FRAMES, ensureInk } from "./frames.js";
+import { frame, FRAMES, ensureInk, jellyOnView } from "./frames.js";
 
 const { artist, theme, hero, paintings = [], sketchbooks = [], extras = [], social = {} } = content;
 const INK = theme.ink, PAPER = theme.paper, PAL = theme.palette;
@@ -639,6 +639,7 @@ $$(".sec-title").forEach((h) => frame(h));
 $$(".wsec__title").forEach((h) => frame(h, { indent: 0 }));
 frame($(".contact__big"), { seed: "hi" });
 ensureInk(); setWord(0);
+jellyOnView($$(".framed"));
 
 /* ---------- Scroll reveal ---------- */
 const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))), { threshold: 0.15 });
