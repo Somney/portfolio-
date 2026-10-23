@@ -1121,7 +1121,8 @@ function viewerFrame(now) {
   const tz = V.fitD / V.zoom;
   // keep the view on the book: the further in, the further you can pan (none at 1×)
   const cs = Math.abs(Math.cos(V.spin)), sn = Math.abs(Math.sin(V.spin)), free = Math.max(0, 1 - 1 / V.zoom);
-  const rx = (cs * V.W + sn * V.H / 2) * 1.05 * free, ry = (sn * V.W + cs * V.H / 2) * 1.05 * free;
+  // room to pan a little past the page edges too (a sticky note can flip out past the page)
+  const rx = (cs * V.W * 1.6 + sn * V.H / 2 * 1.3) * free, ry = (sn * V.W * 1.6 + cs * V.H / 2 * 1.3) * free;
   V.fx = clamp(V.fx, -rx, rx); V.fy = clamp(V.fy, -0.04 - ry, -0.04 + ry);
   const tx = V.fx, ty = V.fy;
   const kk = V.holdCam ? 0 : V.gesture ? 1 - Math.exp(-dt * 30) : k;   // follow fingers tightly, ease otherwise
