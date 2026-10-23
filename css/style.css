@@ -475,9 +475,12 @@ body::after {
 .framed .frame::before { content: ""; position: absolute; inset: 0; background: var(--fbg); filter: url(#inkBlock); z-index: -1; }
 .framed .frame__ink { display: inline-block; transform: translate(var(--fmx, 0), var(--fmy, 0)); filter: url(#inkText); }
 .framed.glitching::before, .framed.glitching::after { display: none; }
-.hero__name.framed { font-size: clamp(96px, 26vw, 270px); }
+.hero__name.framed { font-size: clamp(80px, min(26vw, 21svh), 270px); }
 .sec-title.framed { font-size: clamp(60px, 13vw, 170px); }
 .wsec__title.framed { font-size: clamp(52px, 10vw, 120px); }
 .contact__big.framed { font-size: clamp(110px, 26vw, 360px); }
 .hero__words span.framed-word { font-family: var(--frame); font-weight: 500; letter-spacing: -.05em; font-size: 1.35em; line-height: .9; padding: 0 .12em .02em; }
 .hero__words { height: 1.25em; }
+/* top bar: just the iPod (it opens the menu) — the name and link pills repeated the page */
+.topbar .logo, .topbar .toplinks { display: none; }
+.topbar { justify-content: flex-end; }
