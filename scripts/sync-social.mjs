@@ -398,8 +398,17 @@ await manualLinks(tt);
 
 const { sortPosts } = await import("../js/social-sort.js");
 if (!fixture && !args.includes("--no-art")) {
-  const forPaintings = sortPosts([...posts.values()], cfg.sort || [], { hide: cfg.hide || [], keep: cfg.keep || [] })
-    .filter((b) => b.inPaintings).flatMap((b) => b.posts);
+  // TikToks that can show in Work need a picture of the finished piece (their covers are title cards)
+  const work = content.work || [];
+  const inWork = (p) => {
+    if (p.section) return p.section !== "none";
+    const t = new Set((p.tags || []).map((x) => x.toLowerCase()));
+    const sk = content.workSkip || {};
+    if ((sk.tags || []).some((x) => t.has(x)) && !(sk.unless || []).some((x) => t.has(x))) return false;
+    return work.some((w) => (w.match || []).some((m) => t.has(m)));
+  };
+  const forPaintings = sortPosts([...posts.values()], [{ id: "all", match: "*" }], { hide: cfg.hide || [], keep: cfg.keep || [] })[0].posts
+    .filter((p) => p.platform === "tiktok" && inWork(p));
   const todo = forPaintings.filter((p) => !p.art && !p.artLocked && (p.artFails || 0) < 3);
   if (todo.length) log(`Finding finished-artwork images for ${todo.length} post(s)…`);
   for (const p of todo) await findArt(p);
