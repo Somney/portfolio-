@@ -593,7 +593,9 @@
         "fanart",
         "digitalart",
         "procreate"
-      ]
+      ],
+      "art": "assets/social/tiktok/7675024511577738504.jpg",
+      "section": "digital"
     },
     {
       "platform": "tiktok",
@@ -644,7 +646,9 @@
         "househouse",
         "fanart",
         "procreate"
-      ]
+      ],
+      "art": "assets/social/tiktok/7673551833830264082.jpg",
+      "section": "digital"
     },
     {
       "platform": "tiktok",
