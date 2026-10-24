@@ -190,7 +190,7 @@ for (const p of allVisible) {
 function workPieces(w) {
   const out = [], seen = new Set();
   if (w.paintings) for (const s of paintings) for (const it of s.items) {
-    out.push({ title: it.title, meta: [it.year, it.medium, it.size].filter(Boolean).join(" · "), image: it.image, images: [it.image], item: it, date: String(it.year || "") + "-99" });
+    out.push({ title: it.title, meta: [it.year, it.medium, it.size].filter(Boolean).join(" · "), image: it.image, images: [it.image], item: it, date: it.date || s.date || String(it.year || "") + "-00" });
     seen.add((it.title || "").toLowerCase().replace(/[^a-z0-9]+/g, ""));
   }
   const posts = allVisible.filter((p) => workOf.get(p) === w.id).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -202,7 +202,8 @@ function workPieces(w) {
       pc.images.forEach((src, i) => out.push({ ...pc, image: src, images: [src], meta: `${pc.meta} · ${i + 1}/${pc.images.length}` }));
     else out.push(pc);
   }
-  return out;
+  // newest first, hand-picked pieces and feed posts mixed by date (stable for same-date pages)
+  return out.map((pc, i) => [pc, i]).sort((a, b) => (b[0].date || "").slice(0, 10).localeCompare((a[0].date || "").slice(0, 10)) || a[1] - b[1]).map(([pc]) => pc);
 }
 function slidesFor(w, pieces) {
   const slides = [], first = [];

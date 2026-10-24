@@ -167,12 +167,13 @@ export default {
       ink: "#0d0d0d",
       items: [
         // note (optional): a line shown when the painting is opened full-screen
-        { title: "Cyclepath", year: 2026, medium: "Acrylic on canvas", size: "5 × 7 in", image: "assets/paintings/cyclepath.jpg",
+        { title: "Cyclepath", year: 2026, date: "2026-10-20", medium: "Acrylic on canvas", size: "5 × 7 in", image: "assets/paintings/cyclepath.jpg",
           note: "hell no i aint cycle" },
       ],
     },
     {
       id: "sketchbook-01",
+      date: "2026-10-01",    // where these sit among the newest-first Paintings
       title: "Sketchbook 01 — selects",
       blurb: "Favourite pages from the September–October sketchbook.",
       color: "#00e0ff",      // background colour for this series
