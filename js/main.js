@@ -193,13 +193,18 @@ function workPieces(w) {
     out.push({ title: it.title, meta: [it.year, it.medium, it.size].filter(Boolean).join(" · "), image: it.image, images: [it.image], item: it, date: it.date || s.date || String(it.year || "") + "-00" });
     seen.add((it.title || "").toLowerCase().replace(/[^a-z0-9]+/g, ""));
   }
-  const posts = allVisible.filter((p) => workOf.get(p) === w.id).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const moves = content.workMoves || {};
+  const posts = allVisible.filter((p) => workOf.get(p) === w.id || Object.values(moves[p.id] || {}).includes(w.id))
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   for (const p of posts) {
-    const k = keyOf(p); if (seen.has(k)) continue; seen.add(k);
-    const pc = postPiece(p);
+    const mv = moves[p.id] || {}, home = workOf.get(p) === w.id;
+    const k = keyOf(p); if (home && seen.has(k)) continue; if (home) seen.add(k);
+    const pc = postPiece(p), n = pc.images.length;
+    const card = (src, i) => ({ ...pc, image: src, images: [src], meta: `${pc.meta} · ${i + 1}/${n}` });
+    if (!home) { pc.images.forEach((src, i) => mv[i + 1] === w.id && out.push(card(src, i))); continue; }
     // expandYears: in these years, every photo of a multi-photo post gets its own card
-    if ((w.expandAll || (w.expandYears || []).includes(pc.date.slice(0, 4))) && pc.images.length > 1)
-      pc.images.forEach((src, i) => out.push({ ...pc, image: src, images: [src], meta: `${pc.meta} · ${i + 1}/${pc.images.length}` }));
+    if ((w.expandAll || (w.expandYears || []).includes(pc.date.slice(0, 4))) && n > 1)
+      pc.images.forEach((src, i) => !mv[i + 1] && out.push(card(src, i)));
     else out.push(pc);
   }
   // newest first, hand-picked pieces and feed posts mixed by date (stable for same-date pages)

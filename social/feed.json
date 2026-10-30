@@ -1386,7 +1386,8 @@
         "sketchbook",
         "acrylicpainting"
       ],
-      "art": "assets/social/tiktok/7629576718877068562-final.jpg"
+      "art": "assets/social/tiktok/7629576718877068562-final.jpg",
+      "section": "drawings"
     },
     {
       "platform": "tiktok",
@@ -1419,7 +1420,7 @@
         "acrylicmarker",
         "procreate"
       ],
-      "section": "paintings",
+      "section": "drawings",
       "slides": [
         "assets/social/tiktok/7625793148802829586-1.jpg",
         "assets/social/tiktok/7625793148802829586-2.jpg",

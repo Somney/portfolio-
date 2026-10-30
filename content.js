@@ -147,6 +147,11 @@ export default {
   ],
   // posts with these tags stay out of Work (sketchbook pages are in Sketchbooks),
   // unless they also have one of the "unless" tags
+  // single photos of a multi-photo post shown in another Work section: post id → { photo number: section }
+  workMoves: {
+    "18184795849418313": { 5: "paintings", 6: "paintings" },   // PART 4 sketchbook dump
+    "18107912630336717": { 8: "paintings", 11: "paintings" },  // PART 3 sketchbook dump
+  },
   workSkip: { tags: ["sketchbook", "acrylicmarker", "acrylicmarkers", "sketchbookdump"],
               unless: ["canvas", "acrylicpainting", "artbattle", "procreate", "digitalart", "scrawlvember", "inktober"] },
   // the order the carousels show on the page
