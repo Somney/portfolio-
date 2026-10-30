@@ -7,7 +7,7 @@ name: Sync socials & publish
 on:
   push:
     branches: [ccr-4d012364-tldwm9, main]
-    paths-ignore: ["social/**", "assets/social/**"]
+    paths-ignore: ["social/**", "assets/social/**", "assets/thumbs/**"]
   schedule:
     - cron: "17 9 * * *"   # daily, 09:17 UTC
   workflow_dispatch:
@@ -43,11 +43,17 @@ jobs:
         env:
           INSTAGRAM_TOKEN: ${{ secrets.INSTAGRAM_TOKEN }}
         run: node scripts/sync-social.mjs
+      - name: Make small preview images for new pictures
+        timeout-minutes: 10
+        continue-on-error: true
+        run: |
+          pip install -q pillow
+          python3 scripts/thumbs.py
       - name: Save new posts to the repo
         run: |
           git config user.name "portfolio-sync"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add social assets/social
+          git add social assets/social assets/thumbs
           if git diff --cached --quiet; then echo "Nothing new."; exit 0; fi
           git commit -m "Sync social posts [skip ci]"
           git pull --rebase origin "${GITHUB_REF_NAME}"

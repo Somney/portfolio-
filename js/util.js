@@ -137,14 +137,21 @@ export function placeholderURL(kind, seed, label, color, w, h) {
   return urlCache.get(key);
 }
 
+// Small WebP preview made by scripts/thumbs.py (assets/x/y.jpg → assets/thumbs/x/y.webp).
+export const thumbOf = (src) => (/^assets\/(?!thumbs\/).+\.(jpe?g|png|webp)$/i.test(src || "") ? src.replace(/^assets\//, "assets/thumbs/").replace(/\.\w+$/, ".webp") : src);
+
 // <img> that swaps itself to a placeholder if the file is missing.
-export function smartImg(src, { kind = "painting", seed = src, label = "", color = "#c6ff00", alt = "" } = {}) {
+// thumb: load the small preview (falls back to the full file if there isn't one).
+// defer: don't load yet; call img.load() when it's needed.
+export function smartImg(src, { kind = "painting", seed = src, label = "", color = "#c6ff00", alt = "", thumb = false, defer = false } = {}) {
   const img = new Image();
   img.alt = alt || label;
   img.decoding = "async";
   img.loading = "lazy";
   const fallback = () => { img.onerror = null; img.src = placeholderURL(kind, seed, label, color, 600, 750); img.dataset.placeholder = "1"; };
-  img.onerror = fallback;
-  if (src) img.src = src; else fallback();
+  const small = thumb && thumbOf(src);
+  img.onerror = small && small !== src ? () => { img.onerror = fallback; img.src = src; } : fallback;
+  img.load = () => { if (img.load.done) return; img.load.done = true; if (src) img.src = small || src; else fallback(); };
+  if (!defer) img.load();
   return img;
 }

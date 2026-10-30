@@ -1,5 +1,5 @@
 import content from "../content.js";
-import { $, $$, el, esc, clamp, smartImg, contrastOn, reducedMotion } from "./util.js";
+import { $, $$, el, esc, clamp, smartImg, thumbOf, contrastOn, reducedMotion } from "./util.js";
 import { SplashBG, splashTransition } from "./splash.js";
 import { startDancer } from "./dancer.js";
 import { blip, flowTick } from "./sound.js";
@@ -92,13 +92,16 @@ function setWord(i) {
   wordEl.classList.add("framed-word");
   wordEl.style.background = bg; wordEl.style.color = fg;
 }
-let heroTimer = reducedMotion ? 0 : setInterval(() => heroNext(), (hero.colorChangeSeconds || 3.2) * 1000);
+// the hero only animates while it's on screen and the tab is open
+let heroOn = true;
+new IntersectionObserver(([e]) => { heroOn = e.isIntersecting; }).observe($(".hero"));
+let heroTimer = reducedMotion ? 0 : setInterval(() => heroOn && !document.hidden && heroNext(), (hero.colorChangeSeconds || 3.2) * 1000);
 $(".hero").addEventListener("click", (e) => {
   if (e.target.closest("a,button")) return;
   const r = e.currentTarget.getBoundingClientRect();
   heroNext(e.clientX - r.left, e.clientY - r.top);
   clearInterval(heroTimer);
-  if (!reducedMotion) heroTimer = setInterval(() => heroNext(), (hero.colorChangeSeconds || 3.2) * 1000);
+  if (!reducedMotion) heroTimer = setInterval(() => heroOn && !document.hidden && heroNext(), (hero.colorChangeSeconds || 3.2) * 1000);
 });
 
 /* ---------- Marquee ---------- */
@@ -128,12 +131,22 @@ function lbShow() {
       media.append(v);
     }
   } else {
-    const img = smartImg(it.src, { label: it.title, color: it.color, seed: it.src || it.title });
+    // the small preview shows at once (usually cached from the card), the full picture swaps in when it's ready
+    const img = smartImg(it.src, { label: it.title, color: it.color, seed: it.src || it.title, thumb: true });
     img.loading = "eager"; media.append(img);
+    if (it.src && thumbOf(it.src) !== it.src) fullImg(it.src).then(() => { if (lbList[lbIdx] === it && !img.dataset.placeholder) img.src = it.src; }, () => {});
+    // warm up the neighbours so swiping feels instant
+    for (const d of [1, -1]) { const n = lbList[(lbIdx + d + lbList.length) % lbList.length]; if (n?.kind === "image" && n.src) fullImg(n.src).catch(() => {}); }
   }
   $(".lb-cap", lb).innerHTML = it.caption;
   const multi = lbList.length > 1;
   $$(".lb-nav", lb).forEach((b) => (b.hidden = !multi));
+}
+const fullCache = new Map();
+function fullImg(src) {
+  if (!fullCache.has(src)) fullCache.set(src, new Promise((res, rej) => { const im = new Image(); im.decoding = "async"; im.onload = () => res(im); im.onerror = rej; im.src = src; }));
+  if (fullCache.size > 40) fullCache.delete(fullCache.keys().next().value);
+  return fullCache.get(src);
 }
 function openLightbox(list, i) {
   if (list[i]?.kind === "embed" || list[i]?.kind === "video") music?.hold(true);
@@ -300,7 +313,7 @@ else {
       const c = el("button", "vcard");
       c.style.setProperty("--d", `${Math.min(i, 12) * 45}ms`);
       const img = el("div", "vcard__img");
-      img.append(smartImg(p.image, { label: p.title || "", color: PAL[i % PAL.length], seed: p.id, kind: "extra" }));
+      img.append(smartImg(p.image, { label: p.title || "", color: PAL[i % PAL.length], seed: p.id, kind: "extra", thumb: true }));
       img.insertAdjacentHTML("beforeend", `<span class="vcard__play">${p.platform === "instagram" && !p.video ? "◎" : "▶"}</span>`);
       c.append(img);
       c.insertAdjacentHTML("beforeend", `<strong>${esc(p.title || "Untitled")}</strong><span class="vcard__meta">${esc([fmtDate(p.date), platformName(p)].filter(Boolean).join(" · "))}</span><span class="vcard__tags">${esc(tagLine(p))}</span>`);
@@ -409,7 +422,7 @@ extras.forEach((x, i) => {
     card.style.setProperty("--card", color);
     card.style.setProperty("--tilt", `${((i * 37) % 7) - 3}deg`);
     const m = el("div", "x-media x-media--feed");
-    m.append(smartImg(p.art || p.image, { label: p.title, color, seed: p.id, kind: "extra" }));
+    m.append(smartImg(p.art || p.image, { label: p.title, color, seed: p.id, kind: "extra", thumb: true }));
     m.insertAdjacentHTML("beforeend", `<span class="vcard__play">▶</span>`);
     card.append(m);
     card.insertAdjacentHTML("beforeend", `<span class="x-badge">▶</span><h3>${esc(x.title || p.title || "Timelapse")}</h3><p>${esc([p.title, fmtDate(p.date)].filter(Boolean).join(" · "))}</p>`);
@@ -430,7 +443,7 @@ extras.forEach((x, i) => {
     card.innerHTML = `<span class="x-badge">${ICON.text}</span><h3>${esc(x.title)}</h3><p>${esc(x.text)}</p>`;
   } else {
     if (x.image || x.type === "image") {
-      const m = el("div", "x-media"); m.append(smartImg(x.image, { label: x.title, color, seed: "x" + i, kind: "extra" })); card.append(m);
+      const m = el("div", "x-media"); m.append(smartImg(x.image, { label: x.title, color, seed: "x" + i, kind: "extra", thumb: true })); card.append(m);
     } else {
       card.append(el("div", "x-media x-media--glyph", `<span>${ICON[x.type] || "★"}</span>`));
     }
@@ -657,5 +670,5 @@ if (m) { document.getElementById("sketchbooks").scrollIntoView(); openBook(m[1],
 /* ---------- Glitch overlay: bitmap collage from free stock + your own art ---------- */
 glitch = initGlitch(content.glitch, {
   palette: PAL, ink: INK,
-  local: [...new Set(buckets.flatMap((b) => b.posts).map((p) => p.art || p.image).filter(Boolean))],
+  local: [...new Set(buckets.flatMap((b) => b.posts).map((p) => thumbOf(p.art || p.image)).filter(Boolean))],
 });

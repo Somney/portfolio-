@@ -98,7 +98,7 @@ export function initGlitch(cfg = {}, { palette, ink, local = [] }) {
   document.body.append(c);
   const g = c.getContext("2d");
   let W = 0, H = 0;
-  const resize = () => { W = innerWidth; H = innerHeight; c.width = Math.round(W / 2); c.height = Math.round(H / 2); }; // half-res = chunky bitmap pixels
+  const resize = () => { if (innerWidth === W && Math.abs(innerHeight - H) < 120) return; W = innerWidth; H = innerHeight; c.width = Math.round(W / 2); c.height = Math.round(H / 2); }; // half-res = chunky bitmap pixels
   addEventListener("resize", resize); resize();
 
   const root = document.documentElement;
@@ -129,7 +129,7 @@ export function initGlitch(cfg = {}, { palette, ink, local = [] }) {
     addPlate(src().catch(() => SOURCES.picsum()));
   };
   for (let i = 0; i < 6; i++) setTimeout(refill, 4000 + i * 900);
-  setInterval(refill, (cfg.refreshSeconds ?? 20) * 1000);   // keep the visuals original
+  setInterval(() => !document.hidden && refill(), (cfg.refreshSeconds ?? 20) * 1000);   // keep the visuals original
 
   /* pieces on screen */
   let pieces = [];
@@ -223,10 +223,13 @@ export function initGlitch(cfg = {}, { palette, ink, local = [] }) {
   })();
 
   // glitch headings now and then
-  const heads = [...document.querySelectorAll(".sec-title, .hero__name, .contact__big")];
-  heads.forEach((h) => (h.dataset.text = h.textContent));
+  // only headings that are on screen (no point repainting ones nobody can see)
+  const heads = [...document.querySelectorAll(".sec-title, .hero__name, .contact__big")], seen = new Set();
+  const io = new IntersectionObserver((es) => es.forEach((e) => (e.isIntersecting ? seen.add(e.target) : seen.delete(e.target))));
+  heads.forEach((h) => { h.dataset.text = h.textContent; io.observe(h); });
   setInterval(() => {
-    const h = pick(heads); if (!h) return;
+    if (document.hidden || root.classList.contains("is-scrolling")) return;
+    const h = pick([...seen]); if (!h) return;
     h.dataset.text = h.textContent; h.classList.add("glitching");
     setTimeout(() => h.classList.remove("glitching"), rnd(250, 600));
   }, 2200);

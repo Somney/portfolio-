@@ -18,7 +18,8 @@ export function makeFlow(root, items, { onOpen, tint = () => "#0d0d0d", seed = "
   const cards = items.map((it, i) => {
     const card = el("button", "cf-item");
     card.setAttribute("aria-label", it.title || "Untitled");
-    card.append(smartImg(it.image, { label: it.title, color: tint(i), seed: seed + i }));
+    // small preview, only fetched once the card comes near the middle
+    card.append(smartImg(it.image, { label: it.title, color: tint(i), seed: seed + i, thumb: true, defer: true }));
     card.addEventListener("click", () => { if (dragged) return; if (i === active) onOpen?.(i); else set(i); });
     stage.append(card);
     return card;
@@ -28,8 +29,10 @@ export function makeFlow(root, items, { onOpen, tint = () => "#0d0d0d", seed = "
     const w = W();
     cards.forEach((card, i) => {
       const d = i - pos, a = Math.abs(d), sg = Math.sign(d);
-      if (a > 7) { card.style.visibility = "hidden"; return; }       // far cards: skip the work
-      card.style.visibility = "";
+      if (a > 9) { if (card.style.display !== "none") card.style.display = "none"; return; }   // far cards: out of the page entirely
+      card.style.display = "";
+      card.firstChild.load?.();
+      card.classList.toggle("far", a > 2.5);                         // no reflection / shadow on the far stack
       const x = a < 1 ? d * w * 0.75 : sg * (w * 0.75 + (a - 1) * w * 0.3);
       const ry = -sg * Math.min(a, 1) * 62, z = -Math.min(a, 1) * w * 0.55 + (a < 1 ? (1 - a) * 60 : 0);
       card.style.transform = `translate(-50%,-50%) translateX(${x}px) translateZ(${z}px) rotateY(${ry}deg)`;
