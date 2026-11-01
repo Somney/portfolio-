@@ -214,7 +214,7 @@ export default {
     // thickness: inches, covers included — the book keeps this thickness however many
     //            pages are uploaded (the rest shows as blank pages at the back)
     // hardcover: true gives the covers thick boards
-    { id: "book-01", title: "Sketchbook 01", year: 2026, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 19,
+    { id: "book-01", title: "Sketchbook 01", year: 2026, color: "#ff3ea5", folder: "assets/sketchbooks/book-01", pages: 22,
       size: [5.25, 8.25], thickness: 0.85, hardcover: true, note: "Sep – Oct 2026" },
     // Started Nov 2023. Page photos were taken recently, so their dates can't be used
     // for ordering — pages are numbered by hand (page-01, page-02, … in the order sent).
