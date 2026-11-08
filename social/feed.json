@@ -10,7 +10,7 @@
       "id": "7705511527608028434",
       "url": "https://www.tiktok.com/@lifeofseif/video/7705511527608028434",
       "caption": "Still working on this one but I'm happy with where it's going :) #painting #wip #customcanvas ",
-      "title": "Still working on this one but I'm happy with where it's going :)",
+      "title": "Red light, Green light",
       "date": "2026-11-07T19:20:21.000Z",
       "image": "assets/social/tiktok/7705511527608028434.jpg",
       "duration": 50,
@@ -27,7 +27,9 @@
         "assets/social/tiktok/7705511527608028434-4.jpg",
         "assets/social/tiktok/7705511527608028434-5.jpg"
       ],
-      "art": "assets/social/tiktok/7705511527608028434-2.jpg"
+      "art": "assets/social/tiktok/7705511527608028434-5.jpg",
+      "titleLocked": true,
+      "artLocked": true
     },
     {
       "platform": "tiktok",
@@ -51,7 +53,8 @@
         "assets/social/tiktok/7704868094803496210-3.jpg",
         "assets/social/tiktok/7704868094803496210-4.jpg"
       ],
-      "art": "assets/social/tiktok/7704868094803496210-2.jpg"
+      "art": "assets/social/tiktok/7704868094803496210-2.jpg",
+      "hidden": true
     },
     {
       "platform": "tiktok",
