@@ -87,7 +87,8 @@
         "assets/social/tiktok/7708207802841386248-3.jpg",
         "assets/social/tiktok/7708207802841386248-4.jpg"
       ],
-      "art": "assets/social/tiktok/7708207802841386248-2.jpg"
+      "art": "assets/social/tiktok/7708207802841386248-4.jpg",
+      "artLocked": true
     },
     {
       "platform": "tiktok",
