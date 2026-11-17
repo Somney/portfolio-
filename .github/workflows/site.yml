@@ -22,7 +22,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # the repo write key is NOT left on disk, so the downloaded tools (yt-dlp etc.)
+      # can never push anything; only the final "save" step gets it
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -50,14 +54,17 @@ jobs:
           pip install -q pillow
           python3 scripts/thumbs.py
       - name: Save new posts to the repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "portfolio-sync"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add social assets/social assets/thumbs
           if git diff --cached --quiet; then echo "Nothing new."; exit 0; fi
           git commit -m "Sync social posts [skip ci]"
-          git pull --rebase origin "${GITHUB_REF_NAME}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git pull --rebase "$REMOTE" "${GITHUB_REF_NAME}"
+          git push "$REMOTE" "HEAD:${GITHUB_REF_NAME}"
 
   deploy:
     needs: sync
@@ -73,6 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           ref: ${{ github.ref_name }}   # includes the posts just synced
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

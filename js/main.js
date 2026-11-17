@@ -1,5 +1,5 @@
 import content from "../content.js";
-import { $, $$, el, esc, clamp, smartImg, thumbOf, contrastOn, reducedMotion } from "./util.js";
+import { $, $$, el, esc, clamp, smartImg, thumbOf, safeUrl, contrastOn, reducedMotion } from "./util.js";
 import { SplashBG, splashTransition } from "./splash.js";
 import { startDancer } from "./dancer.js";
 import { blip, flowTick } from "./sound.js";
@@ -25,7 +25,7 @@ function embedSrc(p, autoplay = false) {
   const m = p.url.match(/instagram\.com\/(?:[\w.]+\/)?(p|reel|tv)\/([\w-]+)/);
   return m ? `https://www.instagram.com/${m[1]}/${m[2]}/embed/captioned/` : null;
 }
-const postLink = (p) => `<a class="lb-link" href="${esc(p.url)}" target="_blank" rel="noopener">${p.platform === "instagram" ? "View on Instagram" : "Watch on TikTok"} ↗</a>`;
+const postLink = (p) => `<a class="lb-link" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${p.platform === "instagram" ? "View on Instagram" : "Watch on TikTok"} ↗</a>`;
 // Instagram videos play from the file itself (Instagram's embed often won't play them)
 const postLightbox = (posts, color) => posts.map((p) => ({
   kind: p.videoUrl ? "video" : "embed", post: p, src: p.videoUrl || p.image, poster: p.image, title: p.title, color,
@@ -48,7 +48,7 @@ $(".contact__name").textContent = artist.slogan ? `${artist.name} — ${artist.s
 $(".contact__slogan").textContent = artist.slogan || "";
 $(".year").textContent = new Date().getFullYear();
 for (const s of artist.socials || []) {
-  const a = el("a", "chip", esc(s.label)); a.href = s.url; a.target = "_blank"; a.rel = "noopener";
+  const a = el("a", "chip", esc(s.label)); a.href = safeUrl(s.url); a.target = "_blank"; a.rel = "noopener";
   $(".contact__socials").append(a);
 }
 
@@ -234,7 +234,7 @@ function slidesFor(w, pieces) {
       slides.push({ kind: play ? (p.videoUrl ? "video" : "embed") : "image", post: p, src: play && p.videoUrl ? p.videoUrl : src, poster: src, title: pc.title, color: w.color,
         caption: `<strong>${esc(pc.title)}</strong><span>${esc(pc.meta)}${n > 1 ? ` · photo ${k + 1} of ${n}` : ""}</span>` +
           (pc.item?.note ? `<em class="lb-note">${esc(pc.item.note)}</em>` : "") + text +
-          (p ? postLink(p) : pc.item?.link ? `<a class="lb-link" href="${esc(pc.item.link)}" target="_blank" rel="noopener">${/tiktok/.test(pc.item.link) ? "Watch on TikTok" : "View on Instagram"} ↗</a>` : "") });
+          (p ? postLink(p) : pc.item?.link ? `<a class="lb-link" href="${esc(safeUrl(pc.item.link))}" target="_blank" rel="noopener">${/tiktok/.test(pc.item.link) ? "Watch on TikTok" : "View on Instagram"} ↗</a>` : "") });
     });
   });
   return { slides, first };
@@ -431,14 +431,14 @@ extras.forEach((x, i) => {
     return;
   }
   const card = el(x.type === "text" || x.type === "tiktok" || x.type === "instagram" ? "div" : x.type === "link" ? "a" : "button", `x-card x-card--${x.type}`);
-  if (x.type === "link") { card.href = x.url; if (!x.url.startsWith("mailto:")) { card.target = "_blank"; card.rel = "noopener"; } }
+  if (x.type === "link") { card.href = safeUrl(x.url); if (!x.url.startsWith("mailto:")) { card.target = "_blank"; card.rel = "noopener"; } }
   card.style.setProperty("--card", color);
   card.style.setProperty("--tilt", `${((i * 37) % 7) - 3}deg`);
   if (x.type === "tiktok" || x.type === "instagram") {
     const frame = socialEmbed(x.url);
     card.innerHTML = `<span class="x-badge">${x.type === "tiktok" ? "♪" : "◎"}</span>`;
     if (frame) { const m = el("div", `x-embed x-embed--${x.type}`); m.append(frame); card.append(m); }
-    card.insertAdjacentHTML("beforeend", `${x.title ? `<h3>${esc(x.title)}</h3>` : ""}<p><a href="${esc(x.url)}" target="_blank" rel="noopener">Open on ${x.type === "tiktok" ? "TikTok" : "Instagram"} ↗</a></p>`);
+    card.insertAdjacentHTML("beforeend", `${x.title ? `<h3>${esc(x.title)}</h3>` : ""}<p><a href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener">Open on ${x.type === "tiktok" ? "TikTok" : "Instagram"} ↗</a></p>`);
   } else if (x.type === "text") {
     card.innerHTML = `<span class="x-badge">${ICON.text}</span><h3>${esc(x.title)}</h3><p>${esc(x.text)}</p>`;
   } else {

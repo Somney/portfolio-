@@ -28,6 +28,9 @@ export function el(tag, cls, html) {
   return n;
 }
 
+// links from data: only web/mail links, never javascript: and the like
+export const safeUrl = (u) => (/^(https?:|mailto:|#|\.?\/|assets\/)/i.test(String(u || "").trim()) ? String(u).trim() : "#");
+
 export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
